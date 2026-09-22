@@ -7,11 +7,11 @@
  */
 
 // Prevent direct script execution if accessed outside PHP context
-defined('DB_HOST') or define('DB_HOST', '127.0.0.1');
-defined('DB_PORT') or define('DB_PORT', '3306');
-defined('DB_NAME') or define('DB_NAME', 'tourism_management');
-defined('DB_USER') or define('DB_USER', 'root');
-defined('DB_PASS') or define('DB_PASS', '');
+defined('DB_HOST') or define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
+defined('DB_PORT') or define('DB_PORT', getenv('DB_PORT') ?: '3306');
+defined('DB_NAME') or define('DB_NAME', getenv('DB_NAME') ?: 'tourism_management');
+defined('DB_USER') or define('DB_USER', getenv('DB_USER') ?: 'root');
+defined('DB_PASS') or define('DB_PASS', getenv('DB_PASS') ?: '');
 defined('DB_CHARSET') or define('DB_CHARSET', 'utf8mb4');
 
 /**
