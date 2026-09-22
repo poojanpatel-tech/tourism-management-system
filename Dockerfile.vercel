@@ -1,7 +1,8 @@
 FROM php:8.2-apache
 
 # Install required PHP extensions for the Tourism Management System
-RUN docker-php-ext-install pdo pdo_mysql
+# Note: 'pdo' is already included in the base image, so we only install 'pdo_mysql'
+RUN docker-php-ext-install pdo_mysql
 
 # Configure Apache to listen on the dynamic $PORT provided by Vercel
 # Vercel assigns a dynamic port via the PORT environment variable.
@@ -12,6 +13,3 @@ RUN a2enmod rewrite
 
 # Copy the application source code to the container
 COPY . /var/www/html/
-
-# Expose the port (informative, actual binding uses $PORT)
-EXPOSE ${PORT}
