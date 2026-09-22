@@ -88,7 +88,11 @@ function checkDBStatus(): array
 function renderDatabaseErrorScreen(PDOException $e): void
 {
     http_response_code(500);
-    $errorMsg = htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+    // Securely log the actual PDO exception for server admins
+    error_log("Database Connection Error: " . $e->getMessage());
+    
+    // Provide a safe, generic message to the public user
+    $errorMsg = "Unable to connect to the application database. Please try again later.";
     ?>
     <!DOCTYPE html>
     <html lang="en">
