@@ -6,6 +6,7 @@
 
 if (session_status() === PHP_SESSION_NONE) {
     // Set secure session cookie parameters
+    ini_set('session.save_path', '/tmp');
     ini_set('session.use_only_cookies', '1');
     ini_set('session.use_strict_mode', '1');
     session_start();
