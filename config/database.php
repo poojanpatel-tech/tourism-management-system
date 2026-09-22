@@ -2,16 +2,35 @@
 /**
  * Database Configuration & PDO Connection
  * Tourism Management System (College Project)
- *
- * Configured for XAMPP default settings (localhost, root, empty password).
  */
 
-// Prevent direct script execution if accessed outside PHP context
-defined('DB_HOST') or define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
-defined('DB_PORT') or define('DB_PORT', getenv('DB_PORT') ?: '3306');
-defined('DB_NAME') or define('DB_NAME', getenv('DB_NAME') ?: 'tourism_management');
-defined('DB_USER') or define('DB_USER', getenv('DB_USER') ?: 'root');
-defined('DB_PASS') or define('DB_PASS', getenv('DB_PASS') ?: '');
+$isVercel = getenv('VERCEL') === '1';
+
+if ($isVercel) {
+    // Vercel Production Environment
+    // If essential variables are missing, ensure connection fails safely without falling back to localhost
+    if (!getenv('DB_HOST') || !getenv('DB_USER')) {
+        defined('DB_HOST') or define('DB_HOST', 'invalid_production_config');
+        defined('DB_PORT') or define('DB_PORT', '3306');
+        defined('DB_NAME') or define('DB_NAME', 'invalid');
+        defined('DB_USER') or define('DB_USER', 'invalid');
+        defined('DB_PASS') or define('DB_PASS', '');
+    } else {
+        defined('DB_HOST') or define('DB_HOST', getenv('DB_HOST'));
+        defined('DB_PORT') or define('DB_PORT', getenv('DB_PORT') ?: '3306');
+        defined('DB_NAME') or define('DB_NAME', getenv('DB_NAME'));
+        defined('DB_USER') or define('DB_USER', getenv('DB_USER'));
+        defined('DB_PASS') or define('DB_PASS', getenv('DB_PASS') ?: '');
+    }
+} else {
+    // Local XAMPP Environment Fallback
+    defined('DB_HOST') or define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
+    defined('DB_PORT') or define('DB_PORT', getenv('DB_PORT') ?: '3306');
+    defined('DB_NAME') or define('DB_NAME', getenv('DB_NAME') ?: 'tourism_management');
+    defined('DB_USER') or define('DB_USER', getenv('DB_USER') ?: 'root');
+    defined('DB_PASS') or define('DB_PASS', getenv('DB_PASS') ?: '');
+}
+
 defined('DB_CHARSET') or define('DB_CHARSET', 'utf8mb4');
 
 /**
@@ -46,7 +65,7 @@ function getDBConnection(): PDO
         $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         return $pdo;
     } catch (PDOException $e) {
-        // Render a clean, helpful college-friendly troubleshooting guide
+        // Render a clean, helpful troubleshooting guide
         renderDatabaseErrorScreen($e);
         exit;
     }
@@ -87,12 +106,14 @@ function checkDBStatus(): array
  */
 function renderDatabaseErrorScreen(PDOException $e): void
 {
+    global $isVercel;
+    
     http_response_code(500);
     // Securely log the actual PDO exception for server admins
     error_log("Database Connection Error: " . $e->getMessage());
     
     // Provide a safe, generic message to the public user
-    $errorMsg = "Unable to connect to the application database. Please try again later.";
+    $errorMsg = "The application database is temporarily unavailable. Please try again later.";
     ?>
     <!DOCTYPE html>
     <html lang="en">
@@ -105,7 +126,6 @@ function renderDatabaseErrorScreen(PDOException $e): void
         <style>
             body { background: #f1f5f9; font-family: system-ui, -apple-system, sans-serif; color: #1e293b; min-height: 100vh; display: flex; align-items: center; }
             .error-card { max-width: 680px; margin: auto; border: none; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
-            .badge-step { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 8px; }
             pre { background: #0f172a; color: #f87171; padding: 12px 16px; border-radius: 8px; font-size: 0.85rem; }
         </style>
     </head>
@@ -117,7 +137,7 @@ function renderDatabaseErrorScreen(PDOException $e): void
                         <i class="bi bi-database-exclamation fs-1"></i>
                     </div>
                     <h3 class="fw-bold">Database Connection Notice</h3>
-                    <p class="text-muted">The Tourism Management System could not connect to MySQL.</p>
+                    <p class="text-muted">The Tourism Management System could not connect to the database.</p>
                 </div>
 
                 <div class="alert alert-danger py-2 px-3">
@@ -125,6 +145,7 @@ function renderDatabaseErrorScreen(PDOException $e): void
                     <div class="mt-1"><pre class="mb-0 text-wrap"><?= $errorMsg ?></pre></div>
                 </div>
 
+                <?php if (!$isVercel): ?>
                 <h5 class="fw-semibold mt-3 mb-3">Quick Setup Steps for College Evaluation:</h5>
                 <ol class="list-group list-group-numbered mb-4">
                     <li class="list-group-item">Open <strong>XAMPP Control Panel</strong> and click <strong>Start</strong> next to both <strong>Apache</strong> and <strong>MySQL</strong>.</li>
@@ -133,12 +154,15 @@ function renderDatabaseErrorScreen(PDOException $e): void
                     <li class="list-group-item">Choose the file <code>database.sql</code> located in this project's root folder and click <strong>Go</strong> (it will automatically create the <code>tourism_management</code> database and all sample data).</li>
                     <li class="list-group-item">Refresh this page to access the application!</li>
                 </ol>
+                <?php endif; ?>
 
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-center mt-4">
                     <button onclick="window.location.reload();" class="btn btn-primary px-4">
                         <i class="bi bi-arrow-clockwise me-1"></i> Retry Connection
                     </button>
+                    <?php if (!$isVercel): ?>
                     <span class="text-muted small">Config: <code>config/database.php</code></span>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
