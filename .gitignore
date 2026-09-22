@@ -1,0 +1,15 @@
+.env
+.env.*
+*.log
+*.tmp
+*.bak
+
+.vscode/
+.idea/
+
+.DS_Store
+Thumbs.db
+
+vendor/
+
+assets/images/uploads/
