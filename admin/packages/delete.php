@@ -56,15 +56,15 @@ try {
         $stmtDeactivate = $pdo->prepare('UPDATE packages SET status = "inactive", updated_at = NOW() WHERE package_id = :id');
         $stmtDeactivate->execute([':id' => $id]);
 
-        set_flash_message('info', "Package \"{$pkgName}\" ({$pkgCode}) has been marked as Inactive. It is now hidden from new bookings.");
+        set_flash_message('info', "Package \"{$pkgName}\" ({$pkgCode}) has been marked as Inactive. It is now hidden from new enquiries.");
         header('Location: ' . url('admin/packages/index.php'));
         exit;
     }
 
-    // 3. Handle Deletion with Reservation Dependency Check
+    // 3. Handle Deletion with Enquiry Dependency Check
     if ($action === 'delete') {
-        // Count reservations associated with this package
-        $stmtCount = $pdo->prepare('SELECT COUNT(*) FROM reservations WHERE package_id = :id');
+        // Count enquiries associated with this package
+        $stmtCount = $pdo->prepare('SELECT COUNT(*) FROM enquiries WHERE package_id = :id');
         $stmtCount->execute([':id' => $id]);
         $reservationCount = (int)$stmtCount->fetchColumn();
 
@@ -72,14 +72,14 @@ try {
             // Foreign Key dependency — prevent hard deletion
             set_flash_message(
                 'warning',
-                "Cannot delete package \"{$pkgName}\" ({$pkgCode}) because it has {$reservationCount} reservation(s). " .
-                "To maintain booking records, please reassign or cancel those reservations first, or switch this package's status to Inactive."
+                "Cannot delete package \"{$pkgName}\" ({$pkgCode}) because it has {$reservationCount} enquiry(s). " .
+                "To maintain enquiry records, please reassign or delete those enquiries first, or switch this package's status to Inactive."
             );
             header('Location: ' . url('admin/packages/index.php'));
             exit;
         }
 
-        // Safe to delete — no reservations reference this package
+        // Safe to delete — no enquiries reference this package
         $stmtDelete = $pdo->prepare('DELETE FROM packages WHERE package_id = :id');
         $stmtDelete->execute([':id' => $id]);
 

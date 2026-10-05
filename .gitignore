@@ -1,15 +1,11 @@
+# Environment Variables
 .env
 .env.*
+!.env.example
+
+# Markdown Reports (Local artifacts from audits)
+*.md
+!README.md
+
+# Log files
 *.log
-*.tmp
-*.bak
-
-.vscode/
-.idea/
-
-.DS_Store
-Thumbs.db
-
-vendor/
-
-assets/images/uploads/

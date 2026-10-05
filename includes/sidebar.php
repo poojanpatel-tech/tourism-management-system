@@ -41,16 +41,11 @@ $activePage = $activePage ?? 'dashboard';
                     <span>Tour Packages</span>
                 </a>
             </li>
+
             <li class="nav-item">
-                <a class="nav-link <?= ($activePage === 'customers') ? 'active' : '' ?>" href="<?= url('admin/customers/index.php') ?>">
-                    <i class="bi bi-people-fill"></i>
-                    <span>Customers</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?= ($activePage === 'reservations') ? 'active' : '' ?>" href="<?= url('admin/reservations/index.php') ?>">
-                    <i class="bi bi-calendar-check-fill"></i>
-                    <span>Reservations</span>
+                <a class="nav-link <?= ($activePage === 'enquiries') ? 'active' : '' ?>" href="<?= url('admin/enquiries/index.php') ?>">
+                    <i class="bi bi-envelope-paper-fill"></i>
+                    <span>Enquiries</span>
                 </a>
             </li>
         </ul>
@@ -62,6 +57,17 @@ $activePage = $activePage ?? 'dashboard';
                 <a class="nav-link <?= ($activePage === 'reports') ? 'active' : '' ?>" href="<?= url('admin/reports/index.php') ?>">
                     <i class="bi bi-bar-chart-fill"></i>
                     <span>Reports & Summary</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-heading">System Config</div>
+        
+        <ul class="nav flex-column mb-3">
+            <li class="nav-item">
+                <a class="nav-link <?= ($activePage === 'settings') ? 'active' : '' ?>" href="<?= url('admin/settings.php') ?>">
+                    <i class="bi bi-gear-fill"></i>
+                    <span>Business Settings</span>
                 </a>
             </li>
         </ul>

@@ -39,10 +39,10 @@ try {
     // 2. Calculate real-time booking capacity from reservations
     $stmtBookings = $pdo->prepare('
         SELECT
-            COALESCE(SUM(CASE WHEN status = "confirmed" THEN number_of_travelers ELSE 0 END), 0) AS confirmed_count,
-            COALESCE(SUM(CASE WHEN status = "pending" THEN number_of_travelers ELSE 0 END), 0) AS pending_count,
-            COALESCE(SUM(CASE WHEN status = "cancelled" THEN number_of_travelers ELSE 0 END), 0) AS cancelled_count
-        FROM reservations
+            COALESCE(SUM(CASE WHEN status = "confirmed" THEN travellers ELSE 0 END), 0) AS confirmed_count,
+            COALESCE(SUM(CASE WHEN status IN ("new", "in_discussion", "quoted") THEN travellers ELSE 0 END), 0) AS pending_count,
+            COALESCE(SUM(CASE WHEN status = "lost" THEN travellers ELSE 0 END), 0) AS cancelled_count
+        FROM enquiries
         WHERE package_id = :id
     ');
     $stmtBookings->execute([':id' => $id]);
@@ -68,15 +68,13 @@ try {
         $availClass = 'bg-success';
     }
 
-    // 3. Fetch recent reservations for this package
+    // 3. Fetch recent enquiries for this package
     $stmtRes = $pdo->prepare('
-        SELECT r.reservation_id, r.booking_number, r.travel_date, r.number_of_travelers,
-               r.total_amount, r.reservation_date, r.status, r.notes,
-               c.full_name AS customer_name, c.email AS customer_email
-        FROM reservations r
-        INNER JOIN customers c ON r.customer_id = c.customer_id
-        WHERE r.package_id = :id
-        ORDER BY r.reservation_date DESC
+        SELECT id AS enquiry_id, name AS customer_name, email AS customer_email,
+               travel_date, travellers, created_at, status, message AS notes
+        FROM enquiries
+        WHERE package_id = :id
+        ORDER BY created_at DESC
     ');
     $stmtRes->execute([':id' => $id]);
     $reservations = $stmtRes->fetchAll();
@@ -334,23 +332,23 @@ require_once __DIR__ . '/../../includes/navbar.php';
                 </div>
             </div>
 
-            <!-- Associated Reservations -->
+            <!-- Associated Enquiries -->
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-calendar-check-fill text-warning me-2"></i>Reservations</h5>
-                        <small class="text-muted">Bookings for <?= htmlspecialchars($package['package_code'], ENT_QUOTES, 'UTF-8') ?></small>
+                        <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-chat-text-fill text-warning me-2"></i>Enquiries</h5>
+                        <small class="text-muted">Enquiries for <?= htmlspecialchars($package['package_code'], ENT_QUOTES, 'UTF-8') ?></small>
                     </div>
-                    <span class="badge bg-primary px-3 py-2 rounded-pill font-monospace"><?= $totalReservations ?> Booking(s)</span>
+                    <span class="badge bg-primary px-3 py-2 rounded-pill font-monospace"><?= $totalReservations ?> Enquiry(s)</span>
                 </div>
                 <div class="card-body p-0">
                     <?php if (empty($reservations)): ?>
                         <div class="text-center py-5 px-3">
                             <div class="mb-3 text-muted">
-                                <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
-                                <h6 class="fw-bold text-dark">No Reservations Yet</h6>
+                                <i class="bi bi-chat-dots fs-1 d-block mb-2"></i>
+                                <h6 class="fw-bold text-dark">No Enquiries Yet</h6>
                                 <p class="small text-muted col-md-8 mx-auto">
-                                    No customers have booked this package yet. This package can be safely deleted if needed.
+                                    No customers have enquired about this package yet. This package can be safely deleted if needed.
                                 </p>
                             </div>
                         </div>
@@ -359,11 +357,10 @@ require_once __DIR__ . '/../../includes/navbar.php';
                             <table class="table table-hover align-middle mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Booking #</th>
+                                        <th>Enquiry #</th>
                                         <th>Customer</th>
                                         <th>Travel Date</th>
                                         <th class="text-center">Travelers</th>
-                                        <th>Amount</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
@@ -371,15 +368,16 @@ require_once __DIR__ . '/../../includes/navbar.php';
                                     <?php foreach ($reservations as $res): ?>
                                         <tr>
                                             <td class="font-monospace fw-bold small text-primary">
-                                                <?= htmlspecialchars($res['booking_number'], ENT_QUOTES, 'UTF-8') ?>
+                                                <a href="<?= url('admin/enquiries/view.php?id=' . $res['enquiry_id']) ?>" class="text-decoration-none">
+                                                    #<?= htmlspecialchars($res['enquiry_id'], ENT_QUOTES, 'UTF-8') ?>
+                                                </a>
                                             </td>
                                             <td>
                                                 <div class="fw-semibold"><?= htmlspecialchars($res['customer_name'], ENT_QUOTES, 'UTF-8') ?></div>
                                                 <div class="text-muted small"><?= htmlspecialchars($res['customer_email'], ENT_QUOTES, 'UTF-8') ?></div>
                                             </td>
                                             <td class="small"><?= format_date($res['travel_date']) ?></td>
-                                            <td class="text-center fw-semibold"><?= (int)$res['number_of_travelers'] ?></td>
-                                            <td class="fw-bold"><?= format_currency($res['total_amount']) ?></td>
+                                            <td class="text-center fw-semibold"><?= (int)$res['travellers'] ?></td>
                                             <td><?= get_status_badge($res['status']) ?></td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -412,13 +410,13 @@ require_once __DIR__ . '/../../includes/navbar.php';
                 <?php if ($totalReservations > 0): ?>
                     <div class="alert alert-warning py-2 px-3 small my-3">
                         <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                        <strong>Reservation Dependency:</strong> This package has <strong><?= $totalReservations ?> reservation(s)</strong>.
-                        Deleting it would break customer booking records. We recommend deactivating it instead.
+                        <strong>Enquiry Dependency:</strong> This package has <strong><?= $totalReservations ?> enquiry(s)</strong>.
+                        Deleting it would break customer enquiry records. We recommend deactivating it instead.
                     </div>
                 <?php else: ?>
                     <div class="alert alert-info py-2 px-3 small my-3">
                         <i class="bi bi-info-circle-fill me-1"></i>
-                        This package has 0 reservations and can be safely deleted or deactivated.
+                        This package has 0 enquiries and can be safely deleted or deactivated.
                     </div>
                 <?php endif; ?>
 
@@ -430,7 +428,7 @@ require_once __DIR__ . '/../../includes/navbar.php';
                         <button type="submit" class="btn btn-outline-warning text-dark w-100 py-2 text-start d-flex align-items-center justify-content-between">
                             <div>
                                 <div class="fw-bold"><i class="bi bi-pause-circle me-1"></i> Mark as Inactive</div>
-                                <div class="small text-muted">Hides from new bookings while preserving all reservation records.</div>
+                                <div class="small text-muted">Hides from new enquiries while preserving all enquiry records.</div>
                             </div>
                             <i class="bi bi-arrow-right"></i>
                         </button>
@@ -443,7 +441,7 @@ require_once __DIR__ . '/../../includes/navbar.php';
                         <button type="submit" class="btn btn-outline-danger w-100 py-2 text-start d-flex align-items-center justify-content-between mt-2" <?= ($totalReservations > 0 ? 'disabled' : '') ?>>
                             <div>
                                 <div class="fw-bold"><i class="bi bi-trash3 me-1"></i> Permanently Delete</div>
-                                <div class="small text-muted"><?= ($totalReservations > 0 ? 'Disabled because ' . $totalReservations . ' reservation(s) reference this package.' : 'Completely removes this package from MySQL.') ?></div>
+                                <div class="small text-muted"><?= ($totalReservations > 0 ? 'Disabled because ' . $totalReservations . ' enquiry(s) reference this package.' : 'Completely removes this package from MySQL.') ?></div>
                             </div>
                             <i class="bi bi-arrow-right"></i>
                         </button>

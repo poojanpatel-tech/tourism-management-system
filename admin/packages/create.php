@@ -57,6 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $packageCode = trim($_POST['package_code'] ?? '');
     $destinationId = (int)($_POST['destination_id'] ?? 0);
     $duration = trim($_POST['duration'] ?? '');
+    $durationDays = (int)($_POST['duration_days'] ?? 0);
+    $durationNights = (int)($_POST['duration_nights'] ?? 0);
+    $planType = trim($_POST['plan_type'] ?? 'Custom');
     $price = trim($_POST['price'] ?? '');
     $maxCapacity = trim($_POST['maximum_capacity'] ?? '');
     $travelDate = trim($_POST['travel_date'] ?? '');
@@ -65,6 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $excludedServices = trim($_POST['excluded_services'] ?? '');
     $image = trim($_POST['image'] ?? '');
     $status = trim($_POST['status'] ?? 'active');
+    $featured = isset($_POST['featured']) ? 1 : 0;
+    $displayOrder = (int)($_POST['display_order'] ?? 0);
     $csrf = $_POST['csrf_token'] ?? '';
 
     // ---- Validation ----
@@ -153,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Invalid image file extension.';
         } else {
             $safeFilename = 'pkg_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $fileExt;
-            $uploadDir = __DIR__ . '/../../assets/images/';
+            $uploadDir = __DIR__ . '/../../assets/images/packages/';
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0755, true);
             }
@@ -169,17 +174,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         try {
             $stmt = $pdo->prepare('
-                INSERT INTO packages (package_code, package_name, destination_id, duration, price,
+                INSERT INTO packages (package_code, package_name, destination_id, plan_type, duration, duration_days, duration_nights, price,
                                       maximum_capacity, travel_date, description, included_services,
-                                      excluded_services, image, status, created_at)
-                VALUES (:code, :name, :dest_id, :duration, :price, :capacity, :travel_date,
-                        :description, :included, :excluded, :image, :status, NOW())
+                                      excluded_services, image, status, featured, display_order, created_at)
+                VALUES (:code, :name, :dest_id, :plan_type, :duration, :duration_days, :duration_nights, :price, :capacity, :travel_date,
+                        :description, :included, :excluded, :image, :status, :featured, :display_order, NOW())
             ');
             $stmt->execute([
                 ':code'        => $packageCode,
                 ':name'        => $packageName,
                 ':dest_id'     => $destinationId,
+                ':plan_type'   => $planType,
                 ':duration'    => $duration,
+                ':duration_days' => $durationDays,
+                ':duration_nights' => $durationNights,
                 ':price'       => (float)$price,
                 ':capacity'    => (int)$maxCapacity,
                 ':travel_date' => $travelDate !== '' ? $travelDate : null,
@@ -188,6 +196,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':excluded'    => $excludedServices !== '' ? $excludedServices : null,
                 ':image'       => $imageFilename !== '' ? $imageFilename : null,
                 ':status'      => $status,
+                ':featured'    => $featured,
+                ':display_order' => $displayOrder,
             ]);
 
             set_flash_message('success', "Tour package \"{$packageName}\" ({$packageCode}) created successfully!");
@@ -288,13 +298,39 @@ require_once __DIR__ . '/../../includes/navbar.php';
                                 <div class="form-text text-muted">Only active destinations are shown.</div>
                             </div>
 
-                            <!-- Duration -->
+                            <!-- Plan Type -->
                             <div class="col-12 col-md-6">
-                                <label for="duration" class="form-label fw-semibold small text-muted">Duration <span class="text-danger">*</span></label>
+                                <label for="plan_type" class="form-label fw-semibold small text-muted">Plan Type <span class="text-danger">*</span></label>
+                                <select class="form-select" id="plan_type" name="plan_type" required>
+                                    <option value="Custom" <?= (isset($planType) && $planType === 'Custom') ? 'selected' : '' ?>>Custom</option>
+                                    <option value="Day Trip" <?= (isset($planType) && $planType === 'Day Trip') ? 'selected' : '' ?>>Day Trip</option>
+                                    <option value="Basic" <?= (isset($planType) && $planType === 'Basic') ? 'selected' : '' ?>>Basic</option>
+                                    <option value="Premium" <?= (isset($planType) && $planType === 'Premium') ? 'selected' : '' ?>>Premium</option>
+                                    <option value="Family" <?= (isset($planType) && $planType === 'Family') ? 'selected' : '' ?>>Family</option>
+                                </select>
+                            </div>
+
+                            <!-- Duration String -->
+                            <div class="col-12 col-md-6">
+                                <label for="duration" class="form-label fw-semibold small text-muted">Duration (Text) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="duration" name="duration"
                                        placeholder="e.g. 5 Days / 4 Nights"
                                        value="<?= htmlspecialchars($duration, ENT_QUOTES, 'UTF-8') ?>"
                                        required maxlength="50">
+                            </div>
+
+                            <!-- Duration Days & Nights -->
+                            <div class="col-12 col-md-6">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label for="duration_days" class="form-label fw-semibold small text-muted">Days</label>
+                                        <input type="number" class="form-control" id="duration_days" name="duration_days" min="1" value="<?= htmlspecialchars($_POST['duration_days'] ?? 1, ENT_QUOTES, 'UTF-8') ?>">
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="duration_nights" class="form-label fw-semibold small text-muted">Nights</label>
+                                        <input type="number" class="form-control" id="duration_nights" name="duration_nights" min="0" value="<?= htmlspecialchars($_POST['duration_nights'] ?? 0, ENT_QUOTES, 'UTF-8') ?>">
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Price -->
@@ -364,12 +400,29 @@ require_once __DIR__ . '/../../includes/navbar.php';
                             </div>
 
                             <!-- Status -->
-                            <div class="col-12 col-md-6">
+                            <div class="col-12 col-md-4">
                                 <label for="status" class="form-label fw-semibold small text-muted">Status <span class="text-danger">*</span></label>
                                 <select class="form-select" id="status" name="status" required>
-                                    <option value="active" <?= ($status === 'active') ? 'selected' : '' ?>>Active (Available for Bookings)</option>
-                                    <option value="inactive" <?= ($status === 'inactive') ? 'selected' : '' ?>>Inactive (Hidden from bookings)</option>
+                                    <option value="active" <?= ($status === 'active') ? 'selected' : '' ?>>Active</option>
+                                    <option value="inactive" <?= ($status === 'inactive') ? 'selected' : '' ?>>Inactive</option>
                                 </select>
+                            </div>
+
+                            <!-- Display Order -->
+                            <div class="col-12 col-md-4">
+                                <label for="display_order" class="form-label fw-semibold small text-muted">Display Order</label>
+                                <input type="number" class="form-control" id="display_order" name="display_order"
+                                       value="<?= htmlspecialchars($_POST['display_order'] ?? 0, ENT_QUOTES, 'UTF-8') ?>">
+                            </div>
+
+                            <!-- Featured -->
+                            <div class="col-12 col-md-4 d-flex align-items-end">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="featured" name="featured" value="1" <?= isset($_POST['featured']) ? 'checked' : '' ?>>
+                                    <label class="form-check-label fw-semibold small text-muted" for="featured">
+                                        Mark as Featured
+                                    </label>
+                                </div>
                             </div>
                         </div>
 

@@ -24,11 +24,11 @@ $sql = '
            p.maximum_capacity, p.travel_date, p.description, p.included_services, p.excluded_services,
            p.image, p.status, p.created_at,
            d.destination_name, d.country,
-           COALESCE(SUM(CASE WHEN r.status IN ("confirmed", "pending") THEN r.number_of_travelers ELSE 0 END), 0) AS booked_count,
-           (SELECT COUNT(*) FROM reservations r2 WHERE r2.package_id = p.package_id) AS total_reservations
+           COALESCE(SUM(CASE WHEN e.status IN ("quoted", "confirmed") THEN e.travellers ELSE 0 END), 0) AS booked_count,
+           (SELECT COUNT(*) FROM enquiries e2 WHERE e2.package_id = p.package_id) AS total_reservations
     FROM packages p
     INNER JOIN destinations d ON p.destination_id = d.destination_id
-    LEFT JOIN reservations r ON p.package_id = r.package_id
+    LEFT JOIN enquiries e ON p.package_id = e.package_id
     WHERE 1=1
 ';
 $params = [];

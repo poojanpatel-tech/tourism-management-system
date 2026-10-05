@@ -9,6 +9,7 @@ if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.save_path', '/tmp');
     ini_set('session.use_only_cookies', '1');
     ini_set('session.use_strict_mode', '1');
+    session_name('TOURISM_ADMIN_SESSION');
     session_start();
 }
 
@@ -177,6 +178,16 @@ function render_flash_message(): void
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 HTML;
+}
+
+/**
+ * Alias for render_flash_message.
+ *
+ * @return void
+ */
+function display_flash_message(): void
+{
+    render_flash_message();
 }
 
 /**

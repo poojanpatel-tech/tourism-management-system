@@ -64,6 +64,11 @@ $includedServices = $package['included_services'] ?? '';
 $excludedServices = $package['excluded_services'] ?? '';
 $image = $package['image'] ?? '';
 $status = $package['status'];
+$planType = $package['plan_type'] ?? 'Custom';
+$durationDays = $package['duration_days'] ?? 0;
+$durationNights = $package['duration_nights'] ?? 0;
+$featured = $package['featured'] ?? 0;
+$displayOrder = $package['display_order'] ?? 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $packageName = trim($_POST['package_name'] ?? '');
@@ -78,6 +83,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $excludedServices = trim($_POST['excluded_services'] ?? '');
     $image = trim($_POST['image'] ?? $package['image'] ?? '');
     $status = trim($_POST['status'] ?? 'active');
+    $planType = trim($_POST['plan_type'] ?? 'Custom');
+    $durationDays = (int)($_POST['duration_days'] ?? 0);
+    $durationNights = (int)($_POST['duration_nights'] ?? 0);
+    $featured = isset($_POST['featured']) ? 1 : 0;
+    $displayOrder = (int)($_POST['display_order'] ?? 0);
     $csrf = $_POST['csrf_token'] ?? '';
 
     // ---- Validation ----
@@ -166,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Invalid image file extension.';
         } else {
             $safeFilename = 'pkg_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $fileExt;
-            $uploadDir = __DIR__ . '/../../assets/images/';
+            $uploadDir = __DIR__ . '/../../assets/images/packages/';
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0755, true);
             }
@@ -186,7 +196,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 SET package_code     = :code,
                     package_name     = :name,
                     destination_id   = :dest_id,
+                    plan_type        = :plan_type,
                     duration         = :duration,
+                    duration_days    = :duration_days,
+                    duration_nights  = :duration_nights,
                     price            = :price,
                     maximum_capacity = :capacity,
                     travel_date      = :travel_date,
@@ -195,6 +208,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     excluded_services = :excluded,
                     image            = :image,
                     status           = :status,
+                    featured         = :featured,
+                    display_order    = :display_order,
                     updated_at       = NOW()
                 WHERE package_id = :id
             ');
@@ -202,7 +217,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':code'        => $packageCode,
                 ':name'        => $packageName,
                 ':dest_id'     => $destinationId,
+                ':plan_type'   => $planType,
                 ':duration'    => $duration,
+                ':duration_days' => $durationDays,
+                ':duration_nights' => $durationNights,
                 ':price'       => (float)$price,
                 ':capacity'    => (int)$maxCapacity,
                 ':travel_date' => $travelDate !== '' ? $travelDate : null,
@@ -211,6 +229,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':excluded'    => $excludedServices !== '' ? $excludedServices : null,
                 ':image'       => $imageFilename !== '' ? $imageFilename : null,
                 ':status'      => $status,
+                ':featured'    => $featured,
+                ':display_order' => $displayOrder,
                 ':id'          => $id,
             ]);
 
@@ -252,6 +272,31 @@ require_once __DIR__ . '/../../includes/navbar.php';
             <a href="<?= url('admin/packages/index.php') ?>" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i> Back to Packages
             </a>
+        </div>
+    </div>
+
+    <!-- Management Navigation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-3 d-flex flex-wrap gap-2">
+                    <a href="<?= url('admin/packages/edit.php?id=' . $id) ?>" class="btn btn-primary">
+                        <i class="bi bi-info-circle me-1"></i> Basic Details
+                    </a>
+                    <a href="<?= url('admin/packages/itinerary.php?id=' . $id) ?>" class="btn btn-outline-secondary">
+                        <i class="bi bi-map me-1"></i> Itinerary Builder
+                    </a>
+                    <a href="<?= url('admin/packages/inclusions.php?id=' . $id) ?>" class="btn btn-outline-secondary">
+                        <i class="bi bi-list-check me-1"></i> Inclusions / Exclusions
+                    </a>
+                    <a href="<?= url('admin/packages/highlights.php?id=' . $id) ?>" class="btn btn-outline-secondary">
+                        <i class="bi bi-star me-1"></i> Highlights
+                    </a>
+                    <a href="<?= url('admin/packages/gallery.php?id=' . $id) ?>" class="btn btn-outline-secondary">
+                        <i class="bi bi-images me-1"></i> Image Gallery
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -316,12 +361,38 @@ require_once __DIR__ . '/../../includes/navbar.php';
                                 </select>
                             </div>
 
-                            <!-- Duration -->
+                            <!-- Plan Type -->
                             <div class="col-12 col-md-6">
-                                <label for="duration" class="form-label fw-semibold small text-muted">Duration <span class="text-danger">*</span></label>
+                                <label for="plan_type" class="form-label fw-semibold small text-muted">Plan Type <span class="text-danger">*</span></label>
+                                <select class="form-select" id="plan_type" name="plan_type" required>
+                                    <option value="Custom" <?= ($planType === 'Custom') ? 'selected' : '' ?>>Custom</option>
+                                    <option value="Day Trip" <?= ($planType === 'Day Trip') ? 'selected' : '' ?>>Day Trip</option>
+                                    <option value="Basic" <?= ($planType === 'Basic') ? 'selected' : '' ?>>Basic</option>
+                                    <option value="Premium" <?= ($planType === 'Premium') ? 'selected' : '' ?>>Premium</option>
+                                    <option value="Family" <?= ($planType === 'Family') ? 'selected' : '' ?>>Family</option>
+                                </select>
+                            </div>
+
+                            <!-- Duration String -->
+                            <div class="col-12 col-md-6">
+                                <label for="duration" class="form-label fw-semibold small text-muted">Duration (Text) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="duration" name="duration"
                                        value="<?= htmlspecialchars($duration, ENT_QUOTES, 'UTF-8') ?>"
                                        required maxlength="50">
+                            </div>
+
+                            <!-- Duration Days & Nights -->
+                            <div class="col-12 col-md-6">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label for="duration_days" class="form-label fw-semibold small text-muted">Days</label>
+                                        <input type="number" class="form-control" id="duration_days" name="duration_days" min="1" value="<?= htmlspecialchars($durationDays, ENT_QUOTES, 'UTF-8') ?>">
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="duration_nights" class="form-label fw-semibold small text-muted">Nights</label>
+                                        <input type="number" class="form-control" id="duration_nights" name="duration_nights" min="0" value="<?= htmlspecialchars($durationNights, ENT_QUOTES, 'UTF-8') ?>">
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Price -->
@@ -384,13 +455,30 @@ require_once __DIR__ . '/../../includes/navbar.php';
                             </div>
 
                             <!-- Status -->
-                            <div class="col-12 col-md-6">
+                            <div class="col-12 col-md-4">
                                 <label for="status" class="form-label fw-semibold small text-muted">Status <span class="text-danger">*</span></label>
                                 <select class="form-select" id="status" name="status" required>
                                     <option value="active" <?= ($status === 'active') ? 'selected' : '' ?>>Active</option>
                                     <option value="inactive" <?= ($status === 'inactive') ? 'selected' : '' ?>>Inactive</option>
                                     <option value="sold_out" <?= ($status === 'sold_out') ? 'selected' : '' ?>>Sold Out</option>
                                 </select>
+                            </div>
+
+                            <!-- Display Order -->
+                            <div class="col-12 col-md-4">
+                                <label for="display_order" class="form-label fw-semibold small text-muted">Display Order</label>
+                                <input type="number" class="form-control" id="display_order" name="display_order"
+                                       value="<?= htmlspecialchars($displayOrder, ENT_QUOTES, 'UTF-8') ?>">
+                            </div>
+
+                            <!-- Featured -->
+                            <div class="col-12 col-md-4 d-flex align-items-end">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="featured" name="featured" value="1" <?= $featured ? 'checked' : '' ?>>
+                                    <label class="form-check-label fw-semibold small text-muted" for="featured">
+                                        Mark as Featured
+                                    </label>
+                                </div>
                             </div>
 
                             <!-- Record History -->

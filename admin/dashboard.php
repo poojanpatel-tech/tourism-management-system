@@ -36,64 +36,43 @@ try {
     $stats['total_packages'] = (int)$pdo->query('SELECT COUNT(*) FROM packages')->fetchColumn();
     $stats['active_packages'] = (int)$pdo->query('SELECT COUNT(*) FROM packages WHERE status = "active"')->fetchColumn();
     
-    // Customers
-    $stats['total_customers'] = (int)$pdo->query('SELECT COUNT(*) FROM customers')->fetchColumn();
-    
-    // Reservations
-    $resStats = $pdo->query('
+    // Enquiries
+    $enqStats = $pdo->query('
         SELECT 
             COUNT(*) AS total,
-            SUM(CASE WHEN status = "pending" THEN 1 ELSE 0 END) AS pending,
-            SUM(CASE WHEN status = "confirmed" THEN 1 ELSE 0 END) AS confirmed,
-            SUM(CASE WHEN status = "cancelled" THEN 1 ELSE 0 END) AS cancelled,
-            SUM(CASE WHEN status != "cancelled" THEN number_of_travelers ELSE 0 END) AS travelers,
-            SUM(CASE WHEN status = "confirmed" THEN total_amount ELSE 0 END) AS revenue
-        FROM reservations
+            SUM(CASE WHEN status = "new" THEN 1 ELSE 0 END) AS new_enq,
+            SUM(CASE WHEN status = "in_discussion" THEN 1 ELSE 0 END) AS discussion,
+            SUM(CASE WHEN status = "quoted" THEN 1 ELSE 0 END) AS quoted,
+            SUM(CASE WHEN status = "confirmed" THEN 1 ELSE 0 END) AS confirmed
+        FROM enquiries
     ')->fetch(PDO::FETCH_ASSOC);
 
-    $stats['total_reservations'] = (int)($resStats['total'] ?? 0);
-    $stats['pending_reservations'] = (int)($resStats['pending'] ?? 0);
-    $stats['confirmed_reservations'] = (int)($resStats['confirmed'] ?? 0);
-    $stats['cancelled_reservations'] = (int)($resStats['cancelled'] ?? 0);
-    $stats['total_travelers'] = (int)($resStats['travelers'] ?? 0);
-    $stats['total_revenue'] = (float)($resStats['revenue'] ?? 0);
+    $stats['total_enquiries'] = (int)($enqStats['total'] ?? 0);
+    $stats['new_enquiries'] = (int)($enqStats['new_enq'] ?? 0);
+    $stats['discussion_enquiries'] = (int)($enqStats['discussion'] ?? 0);
+    $stats['quoted_enquiries'] = (int)($enqStats['quoted'] ?? 0);
+    $stats['confirmed_enquiries'] = (int)($enqStats['confirmed'] ?? 0);
 
-    // Recent Reservations (Latest 10)
-    $recentReservations = $pdo->query('
-        SELECT r.reservation_id, r.booking_number, r.travel_date, r.number_of_travelers, r.total_amount, r.reservation_date, r.status,
-               c.full_name AS customer_name, c.email AS customer_email,
-               p.package_name, p.package_code
-        FROM reservations r
-        INNER JOIN customers c ON r.customer_id = c.customer_id
-        INNER JOIN packages p ON r.package_id = p.package_id
-        ORDER BY r.reservation_date DESC
+    // Recent Enquiries (Latest 10)
+    $recentEnquiries = $pdo->query('
+        SELECT e.id, e.name AS customer_name, e.email AS customer_email, e.created_at, e.status,
+               p.package_name
+        FROM enquiries e
+        LEFT JOIN packages p ON e.package_id = p.package_id
+        ORDER BY e.created_at DESC
         LIMIT 10
     ')->fetchAll();
 
-    // Upcoming Trips
-    $upcomingTrips = $pdo->query('
-        SELECT r.reservation_id, r.booking_number, r.travel_date, r.number_of_travelers, r.status,
-               c.full_name AS customer_name,
-               p.package_name
-        FROM reservations r
-        INNER JOIN customers c ON r.customer_id = c.customer_id
-        INNER JOIN packages p ON r.package_id = p.package_id
-        WHERE r.travel_date >= CURDATE() AND r.status != "cancelled"
-        ORDER BY r.travel_date ASC
-        LIMIT 6
-    ')->fetchAll();
-
-    // Most Booked Packages
+    // Most Enquired Packages
     $popularPackages = $pdo->query('
         SELECT p.package_name, d.destination_name,
-               COUNT(r.reservation_id) AS total_bookings,
-               COALESCE(SUM(CASE WHEN r.status != "cancelled" THEN r.number_of_travelers ELSE 0 END), 0) AS total_travelers,
-               COALESCE(SUM(CASE WHEN r.status = "confirmed" THEN r.total_amount ELSE 0 END), 0) AS confirmed_revenue
+               COUNT(e.id) AS total_enquiries,
+               COALESCE(SUM(CASE WHEN e.status = "confirmed" THEN 1 ELSE 0 END), 0) AS confirmed_enquiries
         FROM packages p
         INNER JOIN destinations d ON p.destination_id = d.destination_id
-        LEFT JOIN reservations r ON p.package_id = r.package_id
+        LEFT JOIN enquiries e ON p.package_id = e.package_id
         GROUP BY p.package_id, p.package_name, d.destination_name
-        ORDER BY total_bookings DESC, confirmed_revenue DESC
+        ORDER BY total_enquiries DESC
         LIMIT 5
     ')->fetchAll();
 
@@ -101,23 +80,22 @@ try {
     $destinationPerformance = $pdo->query('
         SELECT d.destination_name,
                COUNT(DISTINCT p.package_id) AS package_count,
-               COUNT(r.reservation_id) AS total_bookings,
-               COALESCE(SUM(CASE WHEN r.status != "cancelled" THEN r.number_of_travelers ELSE 0 END), 0) AS total_travelers,
-               COALESCE(SUM(CASE WHEN r.status = "confirmed" THEN r.total_amount ELSE 0 END), 0) AS confirmed_revenue
+               COUNT(e.id) AS total_enquiries,
+               COALESCE(SUM(CASE WHEN e.status = "confirmed" THEN 1 ELSE 0 END), 0) AS confirmed_enquiries
         FROM destinations d
         LEFT JOIN packages p ON d.destination_id = p.destination_id
-        LEFT JOIN reservations r ON p.package_id = r.package_id
+        LEFT JOIN enquiries e ON p.package_id = e.package_id
         GROUP BY d.destination_id, d.destination_name
-        ORDER BY confirmed_revenue DESC, total_bookings DESC
+        ORDER BY total_enquiries DESC
         LIMIT 5
     ')->fetchAll();
 
     // Package Availability (Same accurate logic)
     $packageAvailability = $pdo->query('
         SELECT p.package_id, p.package_code, p.package_name, p.maximum_capacity, p.price, p.status,
-               COALESCE(SUM(CASE WHEN r.status IN ("confirmed", "pending") THEN r.number_of_travelers ELSE 0 END), 0) AS booked_count
+               COALESCE(SUM(CASE WHEN e.status IN ("confirmed", "quoted") THEN e.travellers ELSE 0 END), 0) AS booked_count
         FROM packages p
-        LEFT JOIN reservations r ON p.package_id = r.package_id
+        LEFT JOIN enquiries e ON p.package_id = e.package_id
         WHERE p.status = "active"
         GROUP BY p.package_id, p.package_code, p.package_name, p.maximum_capacity, p.price, p.status
         ORDER BY booked_count DESC, p.package_name ASC
@@ -145,8 +123,8 @@ require_once __DIR__ . '/../includes/navbar.php';
             <p class="text-muted small mb-0">Operational overview of packages, destinations, and real-time bookings.</p>
         </div>
         <div class="mt-3 mt-md-0 d-flex flex-wrap gap-2">
-            <a href="<?= url('admin/reservations/create.php') ?>" class="btn btn-primary shadow-sm">
-                <i class="bi bi-calendar-plus me-1"></i> New Booking
+            <a href="<?= url('admin/enquiries/index.php') ?>" class="btn btn-primary shadow-sm">
+                <i class="bi bi-envelope-paper-fill me-1"></i> View Enquiries
             </a>
             <a href="<?= url('admin/reports/index.php') ?>" class="btn btn-outline-secondary">
                 <i class="bi bi-file-earmark-bar-graph me-1"></i> Full Reports
@@ -213,29 +191,29 @@ require_once __DIR__ . '/../includes/navbar.php';
 
         <div class="col-12 col-sm-6 col-xl-2">
             <div class="card stat-card p-3 h-100 shadow-sm border-0">
-                <div class="text-muted small fw-semibold text-uppercase mb-1">Customers</div>
-                <h3 class="fw-bold mb-0 text-dark"><?= $stats['total_customers'] ?></h3>
-                <div class="small text-muted mt-1"><i class="bi bi-people me-1"></i>Registered</div>
+                <div class="text-muted small fw-semibold text-uppercase mb-1">Enquiries</div>
+                <h3 class="fw-bold mb-0 text-dark"><?= $stats['total_enquiries'] ?></h3>
+                <div class="small text-muted mt-1"><i class="bi bi-envelope me-1"></i>Total Received</div>
             </div>
         </div>
 
         <div class="col-12 col-sm-6 col-xl-2">
             <div class="card stat-card p-3 h-100 shadow-sm border-0">
-                <div class="text-muted small fw-semibold text-uppercase mb-1">Travelers</div>
-                <h3 class="fw-bold mb-0 text-primary"><?= $stats['total_travelers'] ?></h3>
-                <div class="small text-muted mt-1"><i class="bi bi-person-walking me-1"></i>Active bookings</div>
+                <div class="text-muted small fw-semibold text-uppercase mb-1">New Leads</div>
+                <h3 class="fw-bold mb-0 text-primary"><?= $stats['new_enquiries'] ?></h3>
+                <div class="small text-muted mt-1"><i class="bi bi-bell-fill me-1"></i>Awaiting Action</div>
             </div>
         </div>
     </div>
 
-    <!-- Reservation Status Summary -->
+    <!-- Enquiry Status Summary -->
     <div class="row g-3 mb-4">
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="card stat-card p-3 h-100 shadow-sm border-0 border-start border-4 border-secondary">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-bold">Total Reservations</div>
-                        <h4 class="fw-bold mb-0 mt-1"><?= $stats['total_reservations'] ?></h4>
+                        <div class="text-muted small fw-bold">Total Enquiries</div>
+                        <h4 class="fw-bold mb-0 mt-1"><?= $stats['total_enquiries'] ?></h4>
                     </div>
                     <i class="bi bi-journal-bookmark fs-2 text-secondary opacity-50"></i>
                 </div>
@@ -245,12 +223,25 @@ require_once __DIR__ . '/../includes/navbar.php';
             <div class="card stat-card p-3 h-100 shadow-sm border-0 border-start border-4 border-warning">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-bold">Pending</div>
-                        <h4 class="fw-bold mb-0 mt-1 text-warning-emphasis"><?= $stats['pending_reservations'] ?></h4>
+                        <div class="text-muted small fw-bold">In Discussion</div>
+                        <h4 class="fw-bold mb-0 mt-1 text-warning-emphasis"><?= $stats['discussion_enquiries'] ?></h4>
                     </div>
-                    <i class="bi bi-hourglass-split fs-2 text-warning opacity-50"></i>
+                    <i class="bi bi-chat-dots fs-2 text-warning opacity-50"></i>
                 </div>
-                <?php $pct = $stats['total_reservations'] > 0 ? round(($stats['pending_reservations'] / $stats['total_reservations']) * 100) : 0; ?>
+                <?php $pct = $stats['total_enquiries'] > 0 ? round(($stats['discussion_enquiries'] / $stats['total_enquiries']) * 100) : 0; ?>
+                <div class="small text-muted mt-2"><?= $pct ?>% of total</div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card stat-card p-3 h-100 shadow-sm border-0 border-start border-4 border-primary">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small fw-bold">Quoted</div>
+                        <h4 class="fw-bold mb-0 mt-1 text-primary"><?= $stats['quoted_enquiries'] ?></h4>
+                    </div>
+                    <i class="bi bi-file-earmark-text fs-2 text-primary opacity-50"></i>
+                </div>
+                <?php $pct = $stats['total_enquiries'] > 0 ? round(($stats['quoted_enquiries'] / $stats['total_enquiries']) * 100) : 0; ?>
                 <div class="small text-muted mt-2"><?= $pct ?>% of total</div>
             </div>
         </div>
@@ -258,25 +249,12 @@ require_once __DIR__ . '/../includes/navbar.php';
             <div class="card stat-card p-3 h-100 shadow-sm border-0 border-start border-4 border-success">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="text-muted small fw-bold">Confirmed</div>
-                        <h4 class="fw-bold mb-0 mt-1 text-success"><?= $stats['confirmed_reservations'] ?></h4>
+                        <div class="text-muted small fw-bold">Confirmed / Won</div>
+                        <h4 class="fw-bold mb-0 mt-1 text-success"><?= $stats['confirmed_enquiries'] ?></h4>
                     </div>
                     <i class="bi bi-check-circle fs-2 text-success opacity-50"></i>
                 </div>
-                <?php $pct = $stats['total_reservations'] > 0 ? round(($stats['confirmed_reservations'] / $stats['total_reservations']) * 100) : 0; ?>
-                <div class="small text-muted mt-2"><?= $pct ?>% of total</div>
-            </div>
-        </div>
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="card stat-card p-3 h-100 shadow-sm border-0 border-start border-4 border-danger">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="text-muted small fw-bold">Cancelled</div>
-                        <h4 class="fw-bold mb-0 mt-1 text-danger"><?= $stats['cancelled_reservations'] ?></h4>
-                    </div>
-                    <i class="bi bi-x-circle fs-2 text-danger opacity-50"></i>
-                </div>
-                <?php $pct = $stats['total_reservations'] > 0 ? round(($stats['cancelled_reservations'] / $stats['total_reservations']) * 100) : 0; ?>
+                <?php $pct = $stats['total_enquiries'] > 0 ? round(($stats['confirmed_enquiries'] / $stats['total_enquiries']) * 100) : 0; ?>
                 <div class="small text-muted mt-2"><?= $pct ?>% of total</div>
             </div>
         </div>
@@ -285,48 +263,49 @@ require_once __DIR__ . '/../includes/navbar.php';
     <!-- Main Data Rows -->
     <div class="row g-4 mb-4">
         
-        <!-- Recent Reservations -->
-        <div class="col-12 col-xl-8">
+        <!-- Recent Enquiries -->
+        <div class="col-12">
             <div class="card h-100 border-0 shadow-sm">
                 <div class="card-header bg-white d-flex align-items-center justify-content-between py-3">
-                    <h6 class="fw-bold mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Reservations</h6>
-                    <a href="<?= url('admin/reservations/index.php') ?>" class="btn btn-sm btn-outline-primary py-0">View All</a>
+                    <h6 class="fw-bold mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Enquiries</h6>
+                    <a href="<?= url('admin/enquiries/index.php') ?>" class="btn btn-sm btn-outline-primary py-0">View All</a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Booking #</th>
+                                <th>ID #</th>
                                 <th>Customer</th>
                                 <th>Package</th>
                                 <th>Date</th>
-                                <th class="text-center">Pax</th>
-                                <th>Amount</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (empty($recentReservations)): ?>
-                                <tr><td colspan="7" class="text-center py-4 text-muted">No reservations found.</td></tr>
+                            <?php if (empty($recentEnquiries)): ?>
+                                <tr><td colspan="5" class="text-center py-4 text-muted">No enquiries found.</td></tr>
                             <?php else: ?>
-                                <?php foreach ($recentReservations as $row): ?>
+                                <?php foreach ($recentEnquiries as $row): ?>
                                     <tr>
                                         <td class="fw-bold font-monospace small text-primary">
-                                            <a href="<?= url('admin/reservations/view.php?id=' . $row['reservation_id']) ?>" class="text-decoration-none">
-                                                <?= htmlspecialchars($row['booking_number'], ENT_QUOTES, 'UTF-8') ?>
+                                            <a href="<?= url('admin/enquiries/view.php?id=' . $row['id']) ?>" class="text-decoration-none">
+                                                #<?= htmlspecialchars($row['id'], ENT_QUOTES, 'UTF-8') ?>
                                             </a>
                                         </td>
                                         <td>
                                             <div class="fw-semibold text-dark"><?= htmlspecialchars($row['customer_name'], ENT_QUOTES, 'UTF-8') ?></div>
+                                            <div class="small text-muted"><?= htmlspecialchars($row['customer_email'], ENT_QUOTES, 'UTF-8') ?></div>
                                         </td>
                                         <td>
-                                            <div class="text-truncate" style="max-width: 150px;" title="<?= htmlspecialchars($row['package_name'], ENT_QUOTES, 'UTF-8') ?>">
-                                                <?= htmlspecialchars($row['package_name'], ENT_QUOTES, 'UTF-8') ?>
-                                            </div>
+                                            <?php if ($row['package_name']): ?>
+                                                <div class="text-truncate" style="max-width: 250px;" title="<?= htmlspecialchars($row['package_name'], ENT_QUOTES, 'UTF-8') ?>">
+                                                    <?= htmlspecialchars($row['package_name'], ENT_QUOTES, 'UTF-8') ?>
+                                                </div>
+                                            <?php else: ?>
+                                                <span class="text-muted fst-italic">General Enquiry</span>
+                                            <?php endif; ?>
                                         </td>
-                                        <td class="small"><?= format_date($row['travel_date']) ?></td>
-                                        <td class="text-center fw-semibold"><?= (int)$row['number_of_travelers'] ?></td>
-                                        <td class="fw-bold text-dark"><?= format_currency($row['total_amount']) ?></td>
+                                        <td class="small"><?= format_date($row['created_at']) ?></td>
                                         <td><?= get_status_badge($row['status']) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -337,56 +316,24 @@ require_once __DIR__ . '/../includes/navbar.php';
             </div>
         </div>
 
-        <!-- Upcoming Trips -->
-        <div class="col-12 col-xl-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-white d-flex align-items-center justify-content-between py-3">
-                    <h6 class="fw-bold mb-0"><i class="bi bi-calendar-event me-2 text-info"></i>Upcoming Trips</h6>
-                </div>
-                <div class="card-body p-0">
-                    <?php if (empty($upcomingTrips)): ?>
-                        <div class="text-center py-5 text-muted">
-                            <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>
-                            No upcoming trips scheduled.
-                        </div>
-                    <?php else: ?>
-                        <div class="list-group list-group-flush">
-                            <?php foreach ($upcomingTrips as $trip): ?>
-                                <a href="<?= url('admin/reservations/view.php?id=' . $trip['reservation_id']) ?>" class="list-group-item list-group-item-action p-3">
-                                    <div class="d-flex w-100 justify-content-between align-items-center mb-1">
-                                        <h6 class="mb-0 fw-bold text-dark text-truncate" style="max-width: 70%;"><?= htmlspecialchars($trip['package_name'], ENT_QUOTES, 'UTF-8') ?></h6>
-                                        <small class="text-primary fw-bold font-monospace"><?= format_date($trip['travel_date'], 'M d, Y') ?></small>
-                                    </div>
-                                    <div class="d-flex w-100 justify-content-between align-items-center">
-                                        <small class="text-muted"><i class="bi bi-person me-1"></i><?= htmlspecialchars($trip['customer_name'], ENT_QUOTES, 'UTF-8') ?></small>
-                                        <span class="badge bg-light text-dark border"><i class="bi bi-people-fill me-1"></i><?= $trip['number_of_travelers'] ?> Pax</span>
-                                    </div>
-                                </a>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <!-- Analytical Rows -->
     <div class="row g-4 mb-4">
         
-        <!-- Most Booked Packages -->
+        <!-- Most Enquired Packages -->
         <div class="col-12 col-xl-4">
             <div class="card h-100 border-0 shadow-sm">
                 <div class="card-header bg-white py-3">
-                    <h6 class="fw-bold mb-0"><i class="bi bi-trophy me-2 text-warning"></i>Most Booked Packages</h6>
+                    <h6 class="fw-bold mb-0"><i class="bi bi-trophy me-2 text-warning"></i>Most Enquired Packages</h6>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle mb-0">
                         <thead class="table-light small">
                             <tr>
                                 <th>Package</th>
-                                <th class="text-center">Pax</th>
-                                <th class="text-end">Revenue</th>
+                                <th class="text-center">Enquiries</th>
+                                <th class="text-end">Won</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -401,8 +348,8 @@ require_once __DIR__ . '/../includes/navbar.php';
                                             </div>
                                             <div class="small text-muted"><?= htmlspecialchars($pp['destination_name'], ENT_QUOTES, 'UTF-8') ?></div>
                                         </td>
-                                        <td class="text-center fw-bold text-muted"><?= $pp['total_travelers'] ?></td>
-                                        <td class="text-end fw-bold text-success small"><?= format_currency($pp['confirmed_revenue']) ?></td>
+                                        <td class="text-center fw-bold text-muted"><?= $pp['total_enquiries'] ?></td>
+                                        <td class="text-end fw-bold text-success small"><?= $pp['confirmed_enquiries'] ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -423,8 +370,8 @@ require_once __DIR__ . '/../includes/navbar.php';
                         <thead class="table-light small">
                             <tr>
                                 <th>Destination</th>
-                                <th class="text-center">Bookings</th>
-                                <th class="text-end">Revenue</th>
+                                <th class="text-center">Enquiries</th>
+                                <th class="text-end">Won</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -437,8 +384,8 @@ require_once __DIR__ . '/../includes/navbar.php';
                                             <div class="fw-semibold text-dark"><?= htmlspecialchars($dp['destination_name'], ENT_QUOTES, 'UTF-8') ?></div>
                                             <div class="small text-muted"><?= $dp['package_count'] ?> Packages</div>
                                         </td>
-                                        <td class="text-center fw-bold text-muted"><?= $dp['total_bookings'] ?></td>
-                                        <td class="text-end fw-bold text-success small"><?= format_currency($dp['confirmed_revenue']) ?></td>
+                                        <td class="text-center fw-bold text-muted"><?= $dp['total_enquiries'] ?></td>
+                                        <td class="text-end fw-bold text-success small"><?= $dp['confirmed_enquiries'] ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
