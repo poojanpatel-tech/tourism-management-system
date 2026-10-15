@@ -47,11 +47,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch business settings
-$pdo = getDBConnection();
-$stmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
 $settings = [];
-while ($row = $stmt->fetch()) {
-    $settings[$row['setting_key']] = $row['setting_value'];
+try {
+    $pdo = getDBConnection();
+    $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
+    while ($row = $stmt->fetch()) {
+        $settings[$row['setting_key']] = $row['setting_value'];
+    }
+} catch (PDOException $e) {
+    // Graceful fallback if settings table is temporarily unavailable
+    error_log("Settings load notice in contact.php: " . $e->getMessage());
 }
 
 $pageTitle = 'Get in Touch';

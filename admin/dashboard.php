@@ -53,6 +53,17 @@ try {
     $stats['quoted_enquiries'] = (int)($enqStats['quoted'] ?? 0);
     $stats['confirmed_enquiries'] = (int)($enqStats['confirmed'] ?? 0);
 
+    // Confirmed Booking Value calculation:
+    // Calculates estimated booking revenue based on confirmed customer enquiries (package price * travellers).
+    // Unconfirmed, pending, or cancelled enquiries are excluded to prevent premature revenue recognition.
+    $revStmt = $pdo->query('
+        SELECT COALESCE(SUM(COALESCE(p.price, 0) * COALESCE(e.travellers, 1)), 0) AS confirmed_value
+        FROM enquiries e
+        INNER JOIN packages p ON e.package_id = p.package_id
+        WHERE e.status = "confirmed"
+    ');
+    $stats['total_revenue'] = (float)($revStmt->fetchColumn() ?? 0);
+
     // Recent Enquiries (Latest 10)
     $recentEnquiries = $pdo->query('
         SELECT e.id, e.name AS customer_name, e.email AS customer_email, e.created_at, e.status,
@@ -103,7 +114,11 @@ try {
     ')->fetchAll();
 
 } catch (PDOException $e) {
-    die("Database query error: " . $e->getMessage());
+    error_log("Dashboard DB Error: " . $e->getMessage());
+    $recentEnquiries = $recentEnquiries ?? [];
+    $popularPackages = $popularPackages ?? [];
+    $destinationPerformance = $destinationPerformance ?? [];
+    $packageAvailability = $packageAvailability ?? [];
 }
 
 $pageTitle = 'Admin Dashboard';
@@ -126,9 +141,6 @@ require_once __DIR__ . '/../includes/navbar.php';
             <a href="<?= url('admin/enquiries/index.php') ?>" class="btn btn-primary shadow-sm">
                 <i class="bi bi-envelope-paper-fill me-1"></i> View Enquiries
             </a>
-            <a href="<?= url('admin/reports/index.php') ?>" class="btn btn-outline-secondary">
-                <i class="bi bi-file-earmark-bar-graph me-1"></i> Full Reports
-            </a>
         </div>
     </div>
 
@@ -143,11 +155,11 @@ require_once __DIR__ . '/../includes/navbar.php';
                 <a href="<?= url('admin/packages/create.php') ?>" class="text-decoration-none small text-muted hover-primary">
                     <i class="bi bi-box-seam"></i> Add Package
                 </a>
-                <a href="<?= url('admin/customers/create.php') ?>" class="text-decoration-none small text-muted hover-primary">
-                    <i class="bi bi-person-plus"></i> Register Customer
+                <a href="<?= url('admin/enquiries/index.php') ?>" class="text-decoration-none small text-muted hover-primary">
+                    <i class="bi bi-envelope-paper"></i> View Enquiries
                 </a>
-                <a href="<?= url('admin/reservations/index.php') ?>" class="text-decoration-none small text-muted hover-primary">
-                    <i class="bi bi-list-task"></i> All Reservations
+                <a href="<?= url('admin/settings.php') ?>" class="text-decoration-none small text-muted hover-primary">
+                    <i class="bi bi-gear"></i> Settings
                 </a>
             </div>
         </div>
@@ -160,10 +172,10 @@ require_once __DIR__ . '/../includes/navbar.php';
             <div class="card stat-card p-3 h-100 bg-primary text-white shadow">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <div class="stat-label text-white-50">Confirmed Booking Revenue</div>
+                        <div class="stat-label text-white-50">Confirmed Booking Value</div>
                         <div class="stat-number mt-1 text-white"><?= format_currency($stats['total_revenue']) ?></div>
-                        <div class="text-white-50 small mt-1">
-                            <i class="bi bi-cash-stack me-1"></i> Earned from confirmed trips
+                        <div class="text-white-50 small mt-1" title="Estimated value calculated from confirmed enquiries (Package Price &times; Travellers)">
+                            <i class="bi bi-cash-stack me-1"></i> Est. value from confirmed trips
                         </div>
                     </div>
                     <div class="stat-icon bg-white text-primary rounded-circle" style="opacity: 0.9;">

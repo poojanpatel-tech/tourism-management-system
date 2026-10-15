@@ -32,6 +32,8 @@ if ($isVercel) {
 }
 
 defined('DB_CHARSET') or define('DB_CHARSET', 'utf8mb4');
+defined('DB_SSL_MODE') or define('DB_SSL_MODE', getenv('DB_SSL_MODE') ?: '');
+defined('DB_SSL_CA') or define('DB_SSL_CA', getenv('DB_SSL_CA') ?: '');
 
 /**
  * Get or create the active PDO database connection.
@@ -61,6 +63,21 @@ function getDBConnection(): PDO
         PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . DB_CHARSET,
     ];
 
+    // SSL Configuration for Cloud Databases (e.g. TiDB Cloud, Aiven, AWS RDS, DigitalOcean)
+    $sslRequired = in_array(strtolower(trim((string)DB_SSL_MODE)), ['required', 'true', '1', 'verify_ca', 'verify_identity'], true);
+    if ($sslRequired || !empty(DB_SSL_CA)) {
+        if (!empty(DB_SSL_CA) && file_exists(DB_SSL_CA)) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = DB_SSL_CA;
+        } elseif (file_exists('/etc/ssl/certs/ca-certificates.crt')) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/ssl/certs/ca-certificates.crt';
+        } elseif (file_exists('/etc/pki/tls/certs/ca-bundle.crt')) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/pki/tls/certs/ca-bundle.crt';
+        }
+        if (getenv('DB_SSL_VERIFY') === 'false' || getenv('DB_SSL_VERIFY') === '0') {
+            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+        }
+    }
+
     try {
         $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         return $pdo;
@@ -87,12 +104,25 @@ function checkDBStatus(): array
         DB_CHARSET
     );
 
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_TIMEOUT            => 2,
+    ];
+
+    $sslRequired = in_array(strtolower(trim((string)DB_SSL_MODE)), ['required', 'true', '1'], true);
+    if ($sslRequired || !empty(DB_SSL_CA)) {
+        if (!empty(DB_SSL_CA) && file_exists(DB_SSL_CA)) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = DB_SSL_CA;
+        } elseif (file_exists('/etc/ssl/certs/ca-certificates.crt')) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/ssl/certs/ca-certificates.crt';
+        } elseif (file_exists('/etc/pki/tls/certs/ca-bundle.crt')) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/pki/tls/certs/ca-bundle.crt';
+        }
+    }
+
     try {
-        $testPdo = new PDO($dsn, DB_USER, DB_PASS, [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_TIMEOUT            => 2,
-        ]);
+        $testPdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         return ['connected' => true, 'message' => 'Connected successfully to ' . DB_NAME];
     } catch (PDOException $e) {
         return ['connected' => false, 'message' => $e->getMessage()];
@@ -154,6 +184,17 @@ function renderDatabaseErrorScreen(PDOException $e): void
                     <li class="list-group-item">Choose the file <code>database.sql</code> located in this project's root folder and click <strong>Go</strong> (it will automatically create the <code>tourism_management</code> database and all sample data).</li>
                     <li class="list-group-item">Refresh this page to access the application!</li>
                 </ol>
+                <?php else: ?>
+                <h5 class="fw-semibold mt-3 mb-3">Vercel Deployment Notice:</h5>
+                <p class="small text-muted mb-2">The application is running in a serverless cloud environment. Please configure your external MySQL database credentials in your Vercel Project Settings:</p>
+                <ul class="list-group mb-4 small">
+                    <li class="list-group-item"><strong>DB_HOST</strong>: Hostname of your external cloud MySQL database</li>
+                    <li class="list-group-item"><strong>DB_PORT</strong>: Port number (default <code>3306</code>)</li>
+                    <li class="list-group-item"><strong>DB_NAME</strong>: Database name (e.g. <code>tourism_management</code>)</li>
+                    <li class="list-group-item"><strong>DB_USER</strong>: Database username</li>
+                    <li class="list-group-item"><strong>DB_PASS</strong>: Database password</li>
+                    <li class="list-group-item"><strong>DB_SSL_MODE</strong>: Set to <code>REQUIRED</code> if your cloud database requires SSL/TLS (e.g. TiDB Cloud, Aiven)</li>
+                </ul>
                 <?php endif; ?>
 
                 <div class="d-flex justify-content-between align-items-center mt-4">

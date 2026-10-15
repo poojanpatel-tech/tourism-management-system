@@ -2,7 +2,6 @@
 /**
  * Admin - Business Settings
  */
-session_name('TOURISM_ADMIN_SESSION');
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 
@@ -35,7 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         set_flash_message('success', 'Business settings updated successfully.');
     } catch (PDOException $e) {
         $pdo->rollBack();
-        set_flash_message('danger', 'Failed to update settings: ' . $e->getMessage());
+        error_log("Settings update error: " . $e->getMessage());
+        set_flash_message('danger', 'Failed to update settings. Please try again.');
     }
     
     header('Location: settings.php');
@@ -50,11 +50,14 @@ while ($row = $stmt->fetch()) {
 }
 
 $pageTitle = 'Business Settings';
-require_once '../includes/header.php';
-require_once '../includes/sidebar.php';
+$activePage = 'settings';
+$navTitle = 'Business Settings';
+require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/sidebar.php';
+require_once __DIR__ . '/../includes/navbar.php';
 ?>
 
-<div class="main-content">
+<div class="container-fluid p-0">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Business Settings</h2>
     </div>
@@ -131,4 +134,4 @@ require_once '../includes/sidebar.php';
     </div>
 </div>
 
-<?php require_once '../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

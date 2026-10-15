@@ -1,0 +1,32 @@
+# Vercel Deployment Ignore Rules
+# Project: Patel Travels — Tourism Management System
+
+# Local development and test scratch scripts
+scratch/
+temp_*.php
+*.log
+
+# Database dumps and migration scripts (keep bundle small and secure)
+database.sql
+seed.sql
+migration*.sql
+backup_*.sql
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Version control
+.git/
+.gitignore
+
+# Docker artifacts (not utilized by Vercel serverless)
+Dockerfile*
+docker-compose*
+
+# Local Audit Documentation
+PROJECT_AUDIT_REPORT.md
+PROJECT_FIX_REPORT.md
+FINAL_VERIFICATION_REPORT.md
+VERCEL_DEPLOYMENT_AUDIT.md

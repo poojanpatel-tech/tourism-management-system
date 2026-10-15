@@ -3,7 +3,9 @@
  * Public Header — Patel Travels Luxury Brand
  */
 if (session_status() === PHP_SESSION_NONE) {
-    ini_set('session.save_path', '/tmp');
+    if (is_dir('/tmp') && is_writable('/tmp')) {
+        ini_set('session.save_path', '/tmp');
+    }
     ini_set('session.use_only_cookies', '1');
     ini_set('session.use_strict_mode', '1');
     session_name('TOURISM_CLIENT_SESSION');

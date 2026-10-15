@@ -2,6 +2,10 @@
 // Fetch business settings
 $settings = [];
 try {
+    if (!isset($pdo)) {
+        require_once __DIR__ . '/../config/database.php';
+        $pdo = getDBConnection();
+    }
     $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings");
     while ($row = $stmt->fetch()) {
         $settings[$row['setting_key']] = $row['setting_value'];

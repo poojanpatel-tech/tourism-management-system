@@ -50,16 +50,6 @@ $activePage = $activePage ?? 'dashboard';
             </li>
         </ul>
 
-        <div class="sidebar-heading">Analytics & Reports</div>
-
-        <ul class="nav flex-column mb-3">
-            <li class="nav-item">
-                <a class="nav-link <?= ($activePage === 'reports') ? 'active' : '' ?>" href="<?= url('admin/reports/index.php') ?>">
-                    <i class="bi bi-bar-chart-fill"></i>
-                    <span>Reports & Summary</span>
-                </a>
-            </li>
-        </ul>
 
         <div class="sidebar-heading">System Config</div>
         

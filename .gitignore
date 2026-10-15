@@ -3,9 +3,11 @@
 .env.*
 !.env.example
 
-# Markdown Reports (Local artifacts from audits)
+# Markdown Reports
 *.md
 !README.md
+!VERCEL_DEPLOYMENT_GUIDE.md
+!VERCEL_DEPLOYMENT_AUDIT.md
 
 # Log files
 *.log

@@ -49,12 +49,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($status === 'replied') $status = 'in_discussion';
         
         if (in_array($status, $allowedStatuses)) {
-            $stmt = $pdo->prepare("UPDATE enquiries SET status = :status, updated_at = NOW() WHERE id = :id");
-            $stmt->execute([':status' => $status, ':id' => $id]);
-            set_flash_message('success', 'Enquiry status updated successfully.');
-            // Refresh
-            header("Location: " . url("admin/enquiries/view.php?id=$id"));
-            exit;
+            try {
+                $stmt = $pdo->prepare("UPDATE enquiries SET status = :status, updated_at = NOW() WHERE id = :id");
+                $stmt->execute([':status' => $status, ':id' => $id]);
+                set_flash_message('success', 'Enquiry status updated successfully.');
+                header("Location: " . url("admin/enquiries/view.php?id=$id"));
+                exit;
+            } catch (PDOException $e) {
+                error_log("Enquiry status update error: " . $e->getMessage());
+                set_flash_message('danger', 'Failed to update enquiry status. Please try again.');
+            }
         } else {
             set_flash_message('danger', 'Invalid status selected.');
         }

@@ -40,7 +40,7 @@ INSERT INTO packages (package_id, package_code, package_name, slug, destination_
 (8, 'HIM-BAS-01', 'Shimla & Manali Escape', 'shimla-manali-escape', 4, 'Basic', '6 Days / 5 Nights', 6, 18999.00, 'Per Person', 'Starting price based on selected hotel category and standard occupancy.', 20, 'A classic Himalayan journey through the pine-scented hills of Shimla and the breathtaking valleys of Manali.', 'Accommodation\nBreakfast & Dinner\nPrivate vehicle for sightseeing', 'Flights/Trains\nEntry fees to monuments', NULL, 1, 1, 'March - June', 'Shimla & Manali Escape - 6 Days', 'A classic Himalayan journey through Shimla and Manali.', 'active');
 
 -- 3. PLAN HIGHLIGHTS
-INSERT INTO plan_highlights (package_id, highlight_text, display_order) VALUES
+INSERT INTO plan_highlights (package_id, highlight, display_order) VALUES
 (3, 'Private luxury transfers', 1),
 (3, 'Heritage hotel stays', 2),
 (3, 'Desert sunset experience', 3),
@@ -87,13 +87,16 @@ INSERT INTO settings (setting_key, setting_value) VALUES
 ('tagline', 'Curated Travel Experiences'),
 ('whatsapp', '+91 9876 543 210'),
 ('working_hours', 'Mon - Sat, 10:00 AM - 6:00 PM');
-CREATE TABLE plan_inclusions (
+CREATE TABLE IF NOT EXISTS plan_inclusions (
   id int(11) NOT NULL AUTO_INCREMENT,
   package_id int(11) NOT NULL,
-  	ype enum('inclusion','exclusion') NOT NULL DEFAULT 'inclusion',
-  content text NOT NULL,
+  type enum('included','excluded') NOT NULL DEFAULT 'included',
+  title varchar(200) NOT NULL,
+  description text DEFAULT NULL,
   display_order int(11) NOT NULL DEFAULT 0,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY fk_inclusions_pkg (package_id),
+  CONSTRAINT fk_inclusions_pkg FOREIGN KEY (package_id) REFERENCES packages (package_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 UPDATE packages SET image = 'https://images.unsplash.com/photo-1599661559814-c8c3faee9e0f?auto=format&fit=crop&w=1200&q=80' WHERE package_id = 1;
 UPDATE packages SET image = 'https://images.unsplash.com/photo-1590766940554-63897b6efcc9?auto=format&fit=crop&w=1200&q=80' WHERE package_id = 2;
