@@ -37,6 +37,7 @@ try {
                     <ul>
                         <li><a href="<?= url('about.php') ?>">Our Story</a></li>
                         <li><a href="<?= url('contact.php') ?>">Get In Touch</a></li>
+                        <li><a href="<?= url('auth/login.php') ?>"><i class="bi bi-shield-lock me-1"></i> Management</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-4 col-md-4">
