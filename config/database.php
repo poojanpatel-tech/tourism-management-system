@@ -76,6 +76,8 @@ function getDBConnection(): PDO
 
         $verifyServerCert = (getenv('DB_SSL_VERIFY') === 'false' || getenv('DB_SSL_VERIFY') === '0') ? false : true;
         if (!isset($options[PDO::MYSQL_ATTR_SSL_CA])) {
+            // Ensure TLS is initiated by mysqlnd even when system CA file path is omitted
+            $options[PDO::MYSQL_ATTR_SSL_KEY] = '';
             $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = $verifyServerCert;
         } else {
             if ($verifyServerCert === false) {
