@@ -16,7 +16,7 @@ require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/public_functions.php';
 
 $pdo = getDBConnection();
-$packageId = $_GET['package_id'] ?? null;
+$packageId = $_GET['package_id'] ?? $_GET['id'] ?? null;
 $errors = [];
 $success = false;
 
