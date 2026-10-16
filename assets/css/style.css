@@ -4,20 +4,20 @@
  */
 
 :root {
-    --primary-color: #0f766e;
-    --primary-hover: #115e59;
-    --primary-light: #ccfbf1;
-    --secondary-color: #3b82f6;
-    --sidebar-bg: #0f172a;
-    --sidebar-hover: #1e293b;
-    --sidebar-active: #134e4a;
-    --sidebar-text: #94a3b8;
-    --sidebar-text-active: #ffffff;
-    --body-bg: #f8fafc;
+    --primary-color: #C6A76A;
+    --primary-hover: #B89656;
+    --primary-light: rgba(198, 167, 106, 0.12);
+    --secondary-color: #191A17;
+    --sidebar-bg: #10110F;
+    --sidebar-hover: #191A17;
+    --sidebar-active: #232420;
+    --sidebar-text: #AAA69D;
+    --sidebar-text-active: #C6A76A;
+    --body-bg: #F5F0E7;
     --card-bg: #ffffff;
-    --text-main: #1e293b;
-    --text-muted: #64748b;
-    --border-color: #e2e8f0;
+    --text-main: #191A17;
+    --text-muted: #6B685F;
+    --border-color: #E2DDD4;
     --sidebar-width: 260px;
     --topbar-height: 64px;
 }

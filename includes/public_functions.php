@@ -59,18 +59,13 @@ if (!function_exists('verify_csrf_token')) {
 if (!function_exists('get_public_image')) {
     function get_public_image(?string $imageName, string $type = 'plan'): string {
         if (!empty($imageName)) {
-            // Allow full external URLs directly for development/licensed CDNs
             if (str_starts_with($imageName, 'http://') || str_starts_with($imageName, 'https://')) {
                 return $imageName;
             }
-            
-            // For plans/packages, the dir is assets/images/packages/
-            // For destinations, the dir is assets/images/destinations/
             $dir = ($type === 'destination') ? 'destinations/' : 'packages/';
             return url("assets/images/{$dir}" . htmlspecialchars($imageName));
         }
         
-        // Fallbacks
         if ($type === 'destination') {
             return url("assets/public/images/fallback/destination.jpg");
         } else if ($type === 'hero') {
@@ -78,5 +73,54 @@ if (!function_exists('get_public_image')) {
         } else {
             return url("assets/public/images/fallback/plan.jpg");
         }
+    }
+}
+
+if (!function_exists('get_destination_image')) {
+    function get_destination_image(array $dest): string {
+        $id = (int)($dest['destination_id'] ?? 0);
+        $map = [
+            1 => 'bali.jpg',
+            2 => 'paris.jpg',
+            3 => 'kyoto.jpg',
+            4 => 'swiss.jpg',
+            5 => 'dubai.jpg',
+            6 => 'kerala.jpg',
+        ];
+        if (isset($map[$id])) {
+            return url("assets/images/destinations/" . $map[$id]);
+        }
+        $name = strtolower($dest['destination_name'] ?? '');
+        foreach (['bali', 'paris', 'kyoto', 'swiss', 'dubai', 'kerala'] as $key) {
+            if (str_contains($name, $key)) {
+                return url("assets/images/destinations/{$key}.jpg");
+            }
+        }
+        return url("assets/public/images/fallback/destination.jpg");
+    }
+}
+
+if (!function_exists('get_package_image')) {
+    function get_package_image(array $pkg): string {
+        $img = $pkg['image'] ?? '';
+        if (!empty($img)) {
+            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                return $img;
+            }
+            return url("assets/images/packages/" . htmlspecialchars($img));
+        }
+        $id = (int)($pkg['package_id'] ?? 0);
+        $map = [
+            1 => 'bali.jpg',
+            2 => 'paris.jpg',
+            3 => 'kyoto.jpg',
+            4 => 'swiss.jpg',
+            5 => 'dubai.jpg',
+            6 => 'kerala.jpg',
+        ];
+        if (isset($map[$id])) {
+            return url("assets/images/packages/" . $map[$id]);
+        }
+        return url("assets/public/images/fallback/plan.jpg");
     }
 }

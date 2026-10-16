@@ -1,9 +1,8 @@
 <?php
 /**
- * Administrator Login Page
- * Tourism Management System (College Project)
+ * Administrator & Management Login Page — Patel Travels
+ * Ultra-Luxury Management Portal
  */
-
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 
@@ -42,10 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: ' . url('admin/dashboard.php'));
                 exit;
             } else {
-                $errorMessage = 'Invalid username/email or password. Please try again.';
+                $errorMessage = 'Invalid credentials. Please verify your username and password.';
             }
         } catch (PDOException $e) {
-            $errorMessage = 'Database error during authentication. Please contact support.';
+            $errorMessage = 'Database error during authentication. Please contact system administrator.';
         }
     }
 }
@@ -55,57 +54,133 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PATEL TRAVELS — Admin Login</title>
+    <title>PATEL TRAVELS — Management Portal</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Bootstrap 5.3.3 CSS & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
     <style>
+        :root {
+            --color-midnight: #10110F;
+            --color-charcoal: #191A17;
+            --color-gold: #C6A76A;
+            --color-gold-hover: #D8BA7D;
+            --color-ivory: #F5F0E7;
+            --font-heading: 'Cormorant Garamond', Georgia, serif;
+            --font-body: 'Manrope', sans-serif;
+        }
         body {
-            background: linear-gradient(135deg, #0f172a 0%, #0f766e 100%);
+            font-family: var(--font-body);
+            background-color: var(--color-midnight);
+            background-image: radial-gradient(circle at 50% 30%, rgba(198, 167, 106, 0.08) 0%, rgba(16, 17, 15, 0.98) 70%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 1.5rem;
+            color: var(--color-ivory);
         }
         .login-card {
             width: 100%;
             max-width: 440px;
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            border: none;
+            background: var(--color-charcoal);
+            border: 1px solid rgba(198, 167, 106, 0.25);
+            border-radius: 8px;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7);
             overflow: hidden;
         }
         .login-header {
-            background-color: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 2rem 2rem 1.5rem;
+            padding: 2.8rem 2.2rem 1.8rem;
             text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .login-brand-icon {
-            width: 60px;
-            height: 60px;
-            background: #ccfbf1;
-            color: #0f766e;
-            border-radius: 14px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            margin-bottom: 1rem;
+        .login-brand {
+            font-family: var(--font-heading);
+            font-size: 2rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #ffffff;
+            margin-bottom: 0.3rem;
+        }
+        .login-brand span {
+            color: var(--color-gold);
+        }
+        .login-sub {
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--color-gold);
         }
         .login-body {
-            padding: 2rem;
+            padding: 2.2rem;
+        }
+        .form-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(245, 240, 231, 0.8);
+            margin-bottom: 0.5rem;
+        }
+        .form-control {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            padding: 0.8rem 1rem;
+            border-radius: 4px;
+            transition: all 0.25s ease;
+        }
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--color-gold);
+            color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(198, 167, 106, 0.15);
+        }
+        .input-group-text {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--color-gold);
+            border-radius: 4px 0 0 4px;
+        }
+        .btn-gold {
+            background: var(--color-gold);
+            color: var(--color-midnight);
+            font-weight: 700;
+            font-size: 0.76rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            padding: 0.95rem 1.5rem;
+            border: 1px solid var(--color-gold);
+            border-radius: 4px;
+            width: 100%;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .btn-gold:hover {
+            background: var(--color-gold-hover);
+            border-color: var(--color-gold-hover);
+            box-shadow: 0 6px 20px rgba(198, 167, 106, 0.3);
+            transform: translateY(-1px);
+        }
+        .return-link {
+            font-size: 0.76rem;
+            letter-spacing: 0.1em;
+            color: rgba(245, 240, 231, 0.5);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .return-link:hover {
+            color: var(--color-gold);
         }
     </style>
 </head>
@@ -113,19 +188,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="login-card">
     <div class="login-header">
-        <div class="login-brand-icon">
-            <i class="bi bi-compass-fill"></i>
-        </div>
-        <h4 class="fw-bold mb-1 text-dark">PATEL TRAVELS</h4>
-        <p class="text-muted small mb-0">Tourism Management System &bull; Admin Portal</p>
+        <div class="login-brand">PATEL TRAVELS<span>.</span></div>
+        <div class="login-sub">Executive Management Portal</div>
     </div>
 
     <div class="login-body">
         <?php render_flash_message(); ?>
 
         <?php if (!empty($errorMessage)): ?>
-            <div class="alert alert-danger d-flex align-items-center mb-3 py-2 px-3 small" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div class="alert alert-danger d-flex align-items-center mb-4 py-2 px-3 small border-0 rounded-1" style="background: rgba(220, 38, 38, 0.2); color: #fca5a5;" role="alert">
+                <i class="bi bi-shield-exclamation me-2 fs-5"></i>
                 <div><?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?></div>
             </div>
         <?php endif; ?>
@@ -133,58 +205,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form action="<?= url('auth/login.php') ?>" method="POST" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(generate_csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
             
-            <div class="mb-3">
-                <label for="identifier" class="form-label fw-semibold small text-muted">Username or Email</label>
+            <div class="mb-4">
+                <label for="identifier" class="form-label">Username or Administrator Email</label>
                 <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-person"></i></span>
+                    <span class="input-group-text"><i class="bi bi-person"></i></span>
                     <input type="text"
-                           class="form-control border-start-0 ps-0"
+                           class="form-control"
                            id="identifier"
                            name="identifier"
                            value="<?= htmlspecialchars($identifier, ENT_QUOTES, 'UTF-8') ?>"
-                           placeholder="Enter username or email"
+                           placeholder="admin"
                            required
                            autofocus>
                 </div>
             </div>
 
-            <div class="mb-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <label for="password" class="form-label fw-semibold small text-muted mb-0">Password</label>
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label for="password" class="form-label mb-0">Password</label>
                 </div>
-                <div class="input-group mt-1">
-                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-lock"></i></span>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-key"></i></span>
                     <input type="password"
-                           class="form-control border-start-0 border-end-0 ps-0"
+                           class="form-control"
                            id="password"
                            name="password"
-                           placeholder="Enter password"
+                           placeholder="••••••••"
                            required>
-                    <button class="btn btn-light border border-start-0 text-muted" type="button" id="togglePassword">
+                    <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePasswordBtn" style="border-color: rgba(255, 255, 255, 0.12); color: rgba(255,255,255,0.6);">
                         <i class="bi bi-eye" id="toggleIcon"></i>
                     </button>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold mt-2 shadow-sm">
-                <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Dashboard
-            </button>
+            <div class="mt-4 pt-2">
+                <button type="submit" class="btn-gold">
+                    AUTHENTICATE & ENTER PORTAL <i class="bi bi-arrow-right ms-1"></i>
+                </button>
+            </div>
         </form>
 
-        <div class="text-center mt-4">
-            <p class="text-muted small mb-0 fw-semibold">Head Office: SBR, Ahmedabad (AHM)</p>
+        <div class="text-center mt-4 pt-3 border-top" style="border-color: rgba(255, 255, 255, 0.06) !important;">
+            <a href="<?= url('index.php') ?>" class="return-link">
+                <i class="bi bi-arrow-left me-1"></i> Return to Public Website
+            </a>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Password visibility toggler
-    const toggleBtn = document.getElementById('togglePassword');
+document.addEventListener('DOMContentLoaded', function () {
+    const toggleBtn = document.getElementById('togglePasswordBtn');
     const pwdInput = document.getElementById('password');
     const toggleIcon = document.getElementById('toggleIcon');
 
-    if (toggleBtn && pwdInput) {
+    if (toggleBtn && pwdInput && toggleIcon) {
         toggleBtn.addEventListener('click', function () {
             if (pwdInput.type === 'password') {
                 pwdInput.type = 'text';
@@ -195,6 +270,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
     }
+});
 </script>
+
 </body>
 </html>

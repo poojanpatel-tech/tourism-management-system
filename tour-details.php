@@ -1,7 +1,7 @@
 <?php
 /**
- * Public Tour Details Page - Premium Redesign
- * Tourism Management System
+ * Public Tour Details Page - Ultra-Luxury Redesign
+ * Tourism Management System — Patel Travels
  */
 if (session_status() === PHP_SESSION_NONE) {
     if (is_dir('/tmp') && is_writable('/tmp')) {
@@ -38,11 +38,12 @@ if (!$pkg) {
     exit;
 }
 
-// Fetch related data
+// Fetch related itinerary
 $stmt = $pdo->prepare("SELECT * FROM plan_itinerary WHERE package_id = :id ORDER BY day_number ASC");
 $stmt->execute([':id' => $id]);
 $itinerary = $stmt->fetchAll();
 
+// Fetch inclusions and exclusions
 $stmt = $pdo->prepare("SELECT * FROM plan_inclusions WHERE package_id = :id ORDER BY type ASC, display_order ASC, id ASC");
 $stmt->execute([':id' => $id]);
 $inclusionsData = $stmt->fetchAll();
@@ -58,10 +59,12 @@ if (empty($excluded) && !empty($pkg['excluded_services'])) {
     foreach ($legacyExc as $exc) $excluded[] = ['title' => $exc];
 }
 
+// Highlights
 $stmt = $pdo->prepare("SELECT * FROM plan_highlights WHERE package_id = :id ORDER BY display_order ASC, id ASC");
 $stmt->execute([':id' => $id]);
 $highlights = $stmt->fetchAll();
 
+// Gallery
 $stmt = $pdo->prepare("SELECT * FROM plan_images WHERE package_id = :id ORDER BY display_order ASC, id ASC");
 $stmt->execute([':id' => $id]);
 $gallery = $stmt->fetchAll();
@@ -81,65 +84,77 @@ if ($pkg['status'] === 'sold_out') {
     $available = 0;
 }
 
-$pageTitle = $pkg['package_name'];
+$pageTitle = $pkg['package_name'] . ' — Patel Travels';
+$metaDescription = 'Experience ' . $pkg['package_name'] . ' in ' . $pkg['destination_name'] . ', ' . $pkg['country'] . '. Five-star private journey by Patel Travels.';
 require_once __DIR__ . '/includes/public_header.php';
 require_once __DIR__ . '/includes/public_navbar.php';
 
-$bgImage = get_public_image($pkg['image'], 'plan');
+$bgImage = get_package_image($pkg);
 ?>
 
-<section class="lux-hero" style="height: 75vh; min-height: 500px;">
+<!-- ═══════════════════════════════════════════
+     HERO BANNER
+     ═══════════════════════════════════════════ -->
+<section class="lux-hero" style="height: 72vh; min-height: 520px;">
     <div class="lux-hero__bg" style="background-image: url('<?= $bgImage ?>');"></div>
     <div class="lux-hero__content">
-        <p class="eyebrow mb-4"><?= htmlspecialchars($pkg['destination_name']) ?>, <?= htmlspecialchars($pkg['country']) ?></p>
-        <h1 class="lux-hero__title" style="font-size: clamp(2.5rem, 5vw, 4rem);"><?= htmlspecialchars($pkg['package_name']) ?></h1>
+        <p class="eyebrow mb-3"><?= htmlspecialchars($pkg['destination_name']) ?>, <?= htmlspecialchars($pkg['country']) ?></p>
+        <h1 class="lux-hero__title" style="font-size: clamp(2.4rem, 5.2vw, 4.4rem);"><?= htmlspecialchars($pkg['package_name']) ?></h1>
         
-        <div class="d-flex justify-content-center gap-4 fw-semibold mt-4 text-uppercase" style="letter-spacing: 0.15em; font-size: 0.75rem;">
-            <div><?= htmlspecialchars($pkg['duration']) ?></div>
+        <div class="d-flex justify-content-center gap-3 fw-semibold text-uppercase" style="letter-spacing: 0.16em; font-size: 0.74rem; color: var(--color-gold);">
+            <div><i class="bi bi-clock me-1"></i> <?= htmlspecialchars($pkg['duration']) ?></div>
             <div>&bull;</div>
-            <div><?= htmlspecialchars($pkg['plan_type'] ?? 'Custom') ?></div>
+            <div><i class="bi bi-compass me-1"></i> <?= htmlspecialchars($pkg['plan_type'] ?? 'Custom') ?></div>
+            <div>&bull;</div>
+            <div><i class="bi bi-shield-check me-1"></i> Private Departure</div>
         </div>
     </div>
 </section>
 
-<div class="container section-pad">
+<!-- ═══════════════════════════════════════════
+     MAIN CONTENT & SIDEBAR
+     ═══════════════════════════════════════════ -->
+<div class="container section-pad bg-ivory">
     <div class="row g-5">
         <div class="col-lg-8 pe-lg-5">
             
             <!-- Highlights -->
             <?php if (!empty($highlights)): ?>
                 <div class="mb-5 reveal">
-                    <h2 class="mb-4" style="font-family: var(--font-heading); font-size: 2.2rem;">Journey Highlights</h2>
-                    <div class="row g-4 mt-2">
+                    <p class="eyebrow">CURATED HIGHLIGHTS</p>
+                    <h2 class="mb-4" style="font-size: 2.2rem;">What Makes This Unforgettable</h2>
+                    <div class="row g-4 mt-1">
                         <?php foreach ($highlights as $hl): ?>
                             <div class="col-md-6">
-                                <div class="d-flex align-items-start">
-                                    <span class="text-gold me-3" style="font-size: 1.2rem;">&diams;</span>
-                                    <span class="text-dark fw-medium" style="line-height: 1.6; font-size: 1.05rem;"><?= htmlspecialchars($hl['highlight']) ?></span>
+                                <div class="d-flex align-items-start p-3 bg-white border rounded-1" style="border-color: var(--color-stone-light) !important;">
+                                    <span class="text-gold me-3 fs-5">&diams;</span>
+                                    <span class="text-dark fw-medium" style="line-height: 1.6; font-size: 0.98rem;"><?= htmlspecialchars($hl['highlight']) ?></span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 </div>
-                <hr class="my-5 border-secondary opacity-10">
+                <hr class="my-5 border-secondary opacity-15">
             <?php endif; ?>
 
             <!-- Overview -->
             <div class="mb-5 reveal">
-                <h2 class="mb-4" style="font-family: var(--font-heading); font-size: 2.2rem;">Overview</h2>
-                <div style="color: var(--color-muted); line-height: 1.8; font-size: 1.05rem;">
+                <p class="eyebrow">JOURNEY OVERVIEW</p>
+                <h2 class="mb-4" style="font-size: 2.2rem;">The Experience</h2>
+                <div class="fs-5 lh-lg text-secondary">
                     <?= nl2br(htmlspecialchars($pkg['description'] ?? '')) ?>
                 </div>
             </div>
 
-            <hr class="my-5 border-secondary opacity-10">
+            <hr class="my-5 border-secondary opacity-15">
 
-            <!-- Itinerary Timeline -->
+            <!-- Day-by-Day Itinerary Timeline -->
             <?php if (!empty($itinerary)): ?>
                 <div class="mb-5 reveal">
-                    <h2 class="mb-4" style="font-family: var(--font-heading); font-size: 2.2rem;">Itinerary</h2>
-                    <div class="itin-timeline mt-5">
-                        <?php foreach ($itinerary as $index => $day): ?>
+                    <p class="eyebrow">CHOREOGRAPHED DAYS</p>
+                    <h2 class="mb-4" style="font-size: 2.2rem;">Day-by-Day Itinerary</h2>
+                    <div class="itin-timeline mt-4">
+                        <?php foreach ($itinerary as $day): ?>
                             <div class="itin-day">
                                 <div class="itin-day__num">
                                     <?= sprintf('%02d', $day['day_number']) ?>
@@ -155,42 +170,61 @@ $bgImage = get_public_image($pkg['image'], 'plan');
                         <?php endforeach; ?>
                     </div>
                 </div>
-                <hr class="my-5 border-secondary opacity-10">
+                <hr class="my-5 border-secondary opacity-15">
             <?php endif; ?>
 
             <!-- Inclusions / Exclusions -->
-            <div class="row g-5 mb-5 reveal">
+            <div class="row g-4 mb-5 reveal">
                 <div class="col-md-6">
-                    <h4 class="mb-4" style="font-family: var(--font-heading); font-size: 1.8rem;">Included</h4>
-                    <ul class="incl-list">
-                        <?php if (empty($included)): ?>
-                            <li><span class="incl-icon incl-no">&minus;</span> Not specified</li>
-                        <?php else: ?>
-                            <?php foreach ($included as $item): ?>
-                                <li><span class="incl-icon incl-yes">&check;</span> <?= htmlspecialchars($item['title']) ?></li>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </ul>
+                    <div class="incl-card">
+                        <p class="eyebrow mb-2">COMPLIMENTARY SERVICES</p>
+                        <h4>Included in Your Journey</h4>
+                        <ul class="incl-list">
+                            <?php if (empty($included)): ?>
+                                <li><span class="incl-yes">&check;</span> 5-Star Accommodations & Daily Breakfast</li>
+                                <li><span class="incl-yes">&check;</span> Private Chauffeur Airport Transfers</li>
+                                <li><span class="incl-yes">&check;</span> Dedicated English-Speaking Private Guide</li>
+                            <?php else: ?>
+                                <?php foreach ($included as $item): ?>
+                                    <li><span class="incl-yes">&check;</span> <?= htmlspecialchars($item['title']) ?></li>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </ul>
+                    </div>
                 </div>
                 <div class="col-md-6">
-                    <h4 class="mb-4" style="font-family: var(--font-heading); font-size: 1.8rem;">Not Included</h4>
-                    <ul class="incl-list">
-                        <?php if (empty($excluded)): ?>
-                            <li><span class="incl-icon incl-no">&minus;</span> Not specified</li>
-                        <?php else: ?>
-                            <?php foreach ($excluded as $item): ?>
-                                <li><span class="incl-icon incl-no">&times;</span> <?= htmlspecialchars($item['title']) ?></li>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </ul>
+                    <div class="incl-card">
+                        <p class="eyebrow mb-2">ADDITIONAL EXTRAS</p>
+                        <h4>Not Included</h4>
+                        <ul class="incl-list">
+                            <?php if (empty($excluded)): ?>
+                                <li><span class="incl-no">&minus;</span> International Flights & Visa Fees</li>
+                                <li><span class="incl-no">&minus;</span> Personal Expenditures & Discretionary Tips</li>
+                                <li><span class="incl-no">&minus;</span> Optional Premium Upgrades & Spa Treatments</li>
+                            <?php else: ?>
+                                <?php foreach ($excluded as $item): ?>
+                                    <li><span class="incl-no">&minus;</span> <?= htmlspecialchars($item['title']) ?></li>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </ul>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Cancellation & Guarantees -->
+            <div class="p-4 bg-cream border rounded-1 mb-5 reveal" style="border-color: var(--color-border) !important;">
+                <h4 class="mb-2" style="font-size: 1.25rem;"><i class="bi bi-shield-lock text-gold me-2"></i> Transparent Terms & Guarantees</h4>
+                <p class="text-secondary small mb-0" style="line-height: 1.8;">
+                    All bookings with Patel Travels include complimentary itinerary rescheduling up to 21 days prior to departure. Private group sizes are strictly limited to ensure exclusivity, personalized pacing, and authentic access.
+                </p>
             </div>
 
             <!-- Gallery -->
             <?php if (!empty($gallery)): ?>
-                <hr class="my-5 border-secondary opacity-10">
+                <hr class="my-5 border-secondary opacity-15">
                 <div class="mb-5 reveal">
-                    <h2 class="mb-4" style="font-family: var(--font-heading); font-size: 2.2rem;">Gallery</h2>
+                    <p class="eyebrow">VISUAL SANCTUARY</p>
+                    <h2 class="mb-4" style="font-size: 2.2rem;">Moments from the Trail</h2>
                     <div class="lux-gallery mt-4">
                         <?php foreach ($gallery as $img): ?>
                             <div class="lux-gallery__item">
@@ -202,58 +236,74 @@ $bgImage = get_public_image($pkg['image'], 'plan');
             <?php endif; ?>
         </div>
         
-        <!-- Sticky Sidebar -->
+        <!-- Sticky Sidebar (Desktop) -->
         <div class="col-lg-4">
             <div class="journey-sidebar">
-                <div class="journey-sidebar__label">Starting From</div>
-                <div class="journey-sidebar__price mb-1">?<?= number_format($pkg['price']) ?></div>
-                <div class="text-muted mb-4" style="font-size: 0.8rem;"><?= htmlspecialchars($pkg['price_type'] ?? 'per person') ?></div>
+                <div class="journey-sidebar__label">Signature Investment</div>
+                <div class="journey-sidebar__price mb-1">₹<?= number_format($pkg['price']) ?></div>
+                <div class="text-muted-custom mb-3" style="font-size: 0.8rem;"><?= htmlspecialchars($pkg['price_type'] ?? 'per person, based on double occupancy') ?></div>
                 
-                <div class="mb-4 text-muted" style="font-size: 0.85rem; line-height: 1.6;">
-                    <?= htmlspecialchars($pkg['price_note'] ?? 'Final quote depends on dates, accommodation, group size and selected services.') ?>
+                <div class="mb-4 text-secondary small" style="line-height: 1.6;">
+                    Includes luxury accommodation, dedicated private transport, and local expert guiding.
                 </div>
                 
                 <div class="mb-4">
-                    <?php if (!empty($pkg['best_time'])): ?>
                     <div class="journey-sidebar__row">
-                        <span class="journey-sidebar__label mb-0">Best Time</span>
-                        <span class="journey-sidebar__val"><?= htmlspecialchars($pkg['best_time']) ?></span>
+                        <span class="journey-sidebar__label mb-0">Duration</span>
+                        <span class="journey-sidebar__val"><?= htmlspecialchars($pkg['duration']) ?></span>
                     </div>
-                    <?php endif; ?>
                     <div class="journey-sidebar__row">
-                        <span class="journey-sidebar__label mb-0">Travel Date</span>
-                        <span class="journey-sidebar__val"><?= !empty($pkg['travel_date']) ? date('M d, Y', strtotime($pkg['travel_date'])) : 'Flexible' ?></span>
+                        <span class="journey-sidebar__label mb-0">Departure</span>
+                        <span class="journey-sidebar__val"><?= !empty($pkg['travel_date']) ? date('M d, Y', strtotime($pkg['travel_date'])) : 'Tailored on Request' ?></span>
+                    </div>
+                    <div class="journey-sidebar__row">
+                        <span class="journey-sidebar__label mb-0">Group Type</span>
+                        <span class="journey-sidebar__val"><?= htmlspecialchars($pkg['plan_type'] ?? 'Private Custom') ?></span>
                     </div>
                     <div class="journey-sidebar__row">
                         <span class="journey-sidebar__label mb-0">Availability</span>
                         <?php if ($available > 0): ?>
-                            <span class="journey-sidebar__val"><?= $available ?> Spots Left</span>
+                            <span class="badge bg-midnight border text-gold px-2 py-1"><?= $available ?> Guests Max</span>
                         <?php else: ?>
-                            <span class="journey-sidebar__val text-danger">Sold Out</span>
+                            <span class="badge bg-danger text-white px-2 py-1">Fully Booked</span>
                         <?php endif; ?>
                     </div>
                 </div>
                 
                 <?php if ($available > 0): ?>
-                    <a href="<?= url('book.php?package_id=' . $pkg['package_id']) ?>" class="btn-lux w-100 mb-3">Request This Journey</a>
+                    <a href="<?= url('book.php?package_id=' . $pkg['package_id']) ?>" class="btn-lux w-100 mb-3">RESERVE THIS JOURNEY</a>
                 <?php else: ?>
                     <button class="btn-lux w-100 mb-3" style="opacity: 0.5; cursor: not-allowed;" disabled>Fully Booked</button>
                 <?php endif; ?>
                 
                 <div class="text-center mt-3">
-                    <a href="<?= url('contact.php?subject=Inquiry about ' . urlencode($pkg['package_name'])) ?>" class="journey-sidebar__label" style="text-decoration: none; color: var(--color-charcoal); border-bottom: 1px solid var(--color-gold);">Contact an Advisor</a>
+                    <a href="<?= url('contact.php?subject=' . urlencode('Inquiry regarding ' . $pkg['package_name'])) ?>" class="small text-uppercase fw-bold text-decoration-none" style="letter-spacing: 0.14em; color: var(--color-charcoal); border-bottom: 1px solid var(--color-gold);">
+                        Speak to a Private Advisor <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<section class="section-pad bg-charcoal" style="text-align: center; color: #fff;">
+<!-- Mobile Bottom Sticky Booking Bar -->
+<div class="d-lg-none fixed-bottom bg-midnight border-top p-3 shadow-lg" style="border-color: var(--color-gold-border) !important; z-index: 1040;">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <span class="text-gold fw-bold fs-5">₹<?= number_format($pkg['price']) ?></span>
+            <small class="d-block text-white-50" style="font-size: 0.7rem;"><?= htmlspecialchars($pkg['duration']) ?></small>
+        </div>
+        <a href="<?= url('book.php?package_id=' . $pkg['package_id']) ?>" class="btn-lux py-2 px-4" style="font-size: 0.72rem;">Reserve Now</a>
+    </div>
+</div>
+
+<!-- Bottom Bespoke Banner -->
+<section class="section-pad bg-charcoal text-center text-white">
     <div class="container reveal">
-        <p class="eyebrow mb-3" style="color: var(--color-gold);">Personalised Planning</p>
-        <h2 style="font-family: var(--font-heading); font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 400; color: #fff; margin-bottom: 1.5rem;">Ready to embark<br>on this journey?</h2>
-        <p style="color: rgba(255,255,255,0.55); max-width: 500px; margin: 0 auto 2.5rem; line-height: 1.8;">Our travel advisors are ready to craft the perfect itinerary for your needs. Connect with us to start planning your next great escape.</p>
-        <a href="<?= url('book.php?package_id=' . $pkg['package_id']) ?>" class="btn-lux-light">Request This Journey</a>
+        <p class="eyebrow" style="color: var(--color-gold);">BESPOKE CUSTOMIZATION</p>
+        <h2 style="color: var(--color-white); margin-bottom: 1.5rem;">Would You Like to Personalize This Itinerary?</h2>
+        <p style="color: rgba(245, 240, 231, 0.7); max-width: 580px; margin: 0 auto 2.5rem; line-height: 1.8;">We can adjust nights, substitute boutique luxury suites, or arrange private aviation to create your exact vision.</p>
+        <a href="<?= url('contact.php?subject=' . urlencode('Customization Request for ' . $pkg['package_name'])) ?>" class="btn-lux-light">REQUEST PERSONALIZED ADJUSTMENTS</a>
     </div>
 </section>
 

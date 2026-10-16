@@ -1,6 +1,7 @@
 <?php
 /**
- * Journey Enquiry Flow — Patel Travels
+ * Journey Reservation Flow — Patel Travels
+ * Ultra-Luxury Reservation Workflow
  */
 if (session_status() === PHP_SESSION_NONE) {
     if (is_dir('/tmp') && is_writable('/tmp')) {
@@ -51,8 +52,7 @@ $capacity = (int)$pkg['maximum_capacity'];
 $available = max(0, $capacity - $booked);
 
 if ($available <= 0) {
-    // If someone tries to book a sold out package directly
-    $errors[] = "We're sorry, this journey is currently fully booked.";
+    $errors[] = "We're sorry, this signature journey is currently fully booked.";
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $available > 0) {
@@ -67,17 +67,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $available > 0) {
     $travelDate = $_POST['travel_date'] ?? $pkg['travel_date'];
     $specialRequests = trim($_POST['special_requests'] ?? '');
     
-    if (empty($name)) $errors[] = "Name is required.";
-    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "A valid email is required.";
-    if ($travelers < 1) $errors[] = "Number of travelers must be at least 1.";
-    if ($travelers > $available) $errors[] = "Cannot exceed available capacity of " . $available . " travelers.";
+    if (empty($name)) $errors[] = "Lead guest full name is required.";
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "A valid email address is required.";
+    if ($travelers < 1) $errors[] = "Number of travellers must be at least 1.";
+    if ($travelers > $available) $errors[] = "Cannot exceed available capacity of " . $available . " travellers.";
     
     if (empty($errors)) {
         try {
-            $subject = "Journey Request: " . $pkg['package_name'];
+            $subject = "Private Journey Request: " . $pkg['package_name'];
             $message = "Special Requests: " . ($specialRequests ?: 'None');
             
-            // Insert Enquiry - Safely using DB-sourced destination_id and package_id
             $stmt = $pdo->prepare("
                 INSERT INTO enquiries (name, email, phone, subject, message, status, destination_id, package_id, travel_date, travellers, created_at)
                 VALUES (:name, :email, :phone, :subject, :msg, 'new', :dest_id, :pkg_id, :travel_date, :travellers, NOW())
@@ -101,40 +100,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $available > 0) {
     }
 }
 
-$pageTitle = 'Request Journey: ' . $pkg['package_name'];
+$pageTitle = 'Reserve ' . $pkg['package_name'];
+$metaDescription = 'Secure your reservation for ' . $pkg['package_name'] . ' with Patel Travels. Private bespoke travel planning.';
 require_once __DIR__ . '/includes/public_header.php';
 require_once __DIR__ . '/includes/public_navbar.php';
 ?>
 
 <section class="page-hero" style="height: 50vh; min-height: 400px;">
-    <div class="page-hero__bg" style="background-image: url('<?= get_public_image(null, 'hero') ?>'); background-position: center 30%;"></div>
+    <div class="page-hero__bg" style="background-image: url('<?= get_package_image($pkg) ?>');"></div>
     <div class="page-hero__content">
-        <p class="eyebrow mb-3">Journey Enquiry</p>
-        <h1 style="font-family: var(--font-heading); font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 400; color: #fff;">Request this journey.</h1>
+        <p class="eyebrow" style="color: var(--color-gold);">BESPOKE RESERVATION</p>
+        <h1 class="page-hero__title">Begin Your Journey.</h1>
+        <p class="page-hero__sub"><?= htmlspecialchars($pkg['package_name']) ?> &bull; <?= htmlspecialchars($pkg['destination_name']) ?></p>
     </div>
 </section>
 
-<section class="section-pad">
+<section class="section-pad bg-ivory">
     <div class="container">
         <?php if ($success): ?>
-            <div class="text-center py-5 reveal">
-                <i class="bi bi-check-circle text-gold mb-4" style="font-size: 4rem;"></i>
-                <h2 style="font-family: var(--font-heading); font-size: 2.5rem; color: var(--color-charcoal); margin-bottom: 1rem;">Your journey request has been received.</h2>
-                <p style="color: var(--color-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto 2rem; line-height: 1.8;">Our travel team will review your requirements for <strong><?= htmlspecialchars($pkg['package_name']) ?></strong> and contact you shortly to begin planning.</p>
+            <div class="text-center py-5 reveal mx-auto" style="max-width: 650px;">
+                <div class="mb-4">
+                    <i class="bi bi-check2-circle text-gold" style="font-size: 4.5rem;"></i>
+                </div>
+                <h2 style="font-size: 2.8rem; margin-bottom: 1rem;">Reservation Request Confirmed</h2>
+                <p class="fs-5 text-secondary mb-4 pb-2" style="line-height: 1.8;">
+                    Thank you, <strong><?= htmlspecialchars($name) ?></strong>. Your request for <strong><?= htmlspecialchars($pkg['package_name']) ?></strong> has been transmitted directly to our private concierge desk.
+                </p>
+                <div class="p-4 bg-cream border rounded-1 mb-5 text-start" style="border-color: var(--color-border) !important;">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <span class="text-muted-custom small text-uppercase fw-bold">Journey</span>
+                            <div class="fw-bold"><?= htmlspecialchars($pkg['package_name']) ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted-custom small text-uppercase fw-bold">Departure Date</span>
+                            <div class="fw-bold"><?= date('F j, Y', strtotime($travelDate)) ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted-custom small text-uppercase fw-bold">Travellers</span>
+                            <div class="fw-bold"><?= $travelers ?> <?= $travelers === 1 ? 'Guest' : 'Guests' ?></div>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted-custom small text-uppercase fw-bold">Contact Email</span>
+                            <div class="fw-bold"><?= htmlspecialchars($email) ?></div>
+                        </div>
+                    </div>
+                </div>
                 <div class="d-flex justify-content-center gap-3">
-                    <a href="<?= url('index.php') ?>" class="btn-lux-outline">Return Home</a>
-                    <a href="<?= url('tours.php') ?>" class="btn-lux">Explore More Journeys</a>
+                    <a href="<?= url('index.php') ?>" class="btn-lux">Return to Homepage</a>
+                    <a href="<?= url('tours.php') ?>" class="btn-lux-outline">Explore More Journeys</a>
                 </div>
             </div>
         <?php else: ?>
             <div class="row g-5 justify-content-center">
                 <!-- Form Column -->
                 <div class="col-lg-7 reveal">
-                    <div class="bg-white p-4 p-md-5 shadow-sm" style="border: 1px solid var(--color-border);">
-                        <h3 style="font-family: var(--font-heading); font-size: 2rem; color: var(--color-charcoal); margin-bottom: 2rem;">Traveller Details</h3>
+                    <div class="lux-form-card">
+                        <p class="eyebrow">STEP 1 OF 2 &bull; GUEST INFORMATION</p>
+                        <h3 class="mb-4" style="font-size: 2rem;">Lead Traveller Details</h3>
                         
                         <?php if (!empty($errors)): ?>
-                            <div class="alert alert-danger mb-4 rounded-0 border-0" style="background-color: #fff5f5; color: #dc3545; font-size: 0.9rem;">
+                            <div class="alert alert-danger mb-4 rounded-1 border-0" style="background-color: #fef2f2; color: #991b1b; font-size: 0.92rem;">
                                 <ul class="mb-0 ps-3">
                                     <?php foreach ($errors as $err): ?>
                                         <li><?= htmlspecialchars($err) ?></li>
@@ -148,82 +174,89 @@ require_once __DIR__ . '/includes/public_navbar.php';
                                 <input type="hidden" name="csrf_token" value="<?= generate_csrf_token() ?>">
                                 
                                 <div class="mb-4">
-                                    <label class="form-label">Full Name</label>
-                                    <input type="text" name="name" class="form-control" value="<?= htmlspecialchars($_POST['name'] ?? '') ?>" required>
+                                    <label class="form-label">Full Legal Name <span class="text-gold">*</span></label>
+                                    <input type="text" name="name" class="form-control" placeholder="e.g. Eleanor Vance" value="<?= htmlspecialchars($_POST['name'] ?? '') ?>" required>
                                 </div>
                                 
-                                <div class="row g-4 mb-5">
+                                <div class="row g-4 mb-4">
                                     <div class="col-md-6">
-                                        <label class="form-label">Email</label>
-                                        <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
+                                        <label class="form-label">Email Address <span class="text-gold">*</span></label>
+                                        <input type="email" name="email" class="form-control" placeholder="eleanor@example.com" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Phone</label>
-                                        <input type="text" name="phone" class="form-control" value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>">
+                                        <label class="form-label">Phone / WhatsApp</label>
+                                        <input type="text" name="phone" class="form-control" placeholder="+91 98765 43210" value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>">
                                     </div>
                                 </div>
                                 
-                                <h3 style="font-family: var(--font-heading); font-size: 2rem; color: var(--color-charcoal); margin-bottom: 2rem;">Journey Requirements</h3>
+                                <p class="eyebrow mt-4">STEP 2 OF 2 &bull; JOURNEY PREFERENCES</p>
+                                <h3 class="mb-4" style="font-size: 2rem;">Dates & Party Size</h3>
                                 
                                 <div class="row g-4 mb-4">
                                     <div class="col-md-6">
                                         <label class="form-label">Number of Travellers</label>
-                                        <select name="travelers" class="form-select" required>
-                                            <?php for ($i = 1; $i <= min(10, $available); $i++): ?>
-                                                <option value="<?= $i ?>" <?= (($_POST['travelers'] ?? 1) == $i) ? 'selected' : '' ?>><?= $i ?> <?= $i === 1 ? 'Traveller' : 'Travellers' ?></option>
+                                        <select name="travelers" id="travellerCount" class="form-select" required>
+                                            <?php for ($i = 1; $i <= min(12, $available); $i++): ?>
+                                                <option value="<?= $i ?>" <?= (($_POST['travelers'] ?? 2) == $i) ? 'selected' : '' ?>>
+                                                    <?= $i ?> <?= $i === 1 ? 'Guest' : 'Guests' ?>
+                                                </option>
                                             <?php endfor; ?>
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Travel Date</label>
-                                        <input type="date" name="travel_date" class="form-control" value="<?= htmlspecialchars($_POST['travel_date'] ?? ($pkg['travel_date'] ?? date('Y-m-d', strtotime('+14 days')))) ?>" <?= !empty($pkg['travel_date']) ? 'readonly' : '' ?> required>
-                                        <?php if (!empty($pkg['travel_date'])): ?>
-                                            <div class="form-text mt-2" style="font-size: 0.75rem;">This journey has a fixed departure date.</div>
-                                        <?php endif; ?>
+                                        <label class="form-label">Preferred Departure Date</label>
+                                        <input type="date" name="travel_date" class="form-control" value="<?= htmlspecialchars($_POST['travel_date'] ?? ($pkg['travel_date'] ?? date('Y-m-d', strtotime('+21 days')))) ?>" required>
                                     </div>
                                 </div>
                                 
-                                <div class="mb-5">
-                                    <label class="form-label">Special Requests & Notes</label>
-                                    <textarea name="special_requests" class="form-control" rows="4" placeholder="Dietary requirements, accessibility needs, or special occasions..."><?= htmlspecialchars($_POST['special_requests'] ?? '') ?></textarea>
+                                <div class="mb-4">
+                                    <label class="form-label">Special Requests & Dietary Preferences</label>
+                                    <textarea name="special_requests" class="form-control" rows="4" placeholder="Flight preferences, dietary considerations, celebratory milestones, or room configuration..."><?= htmlspecialchars($_POST['special_requests'] ?? '') ?></textarea>
                                 </div>
                                 
-                                <button type="submit" class="btn-lux w-100">Submit Journey Request</button>
-                                <p class="text-center text-muted mt-3" style="font-size: 0.8rem;">Submitting this form does not commit you to booking. Our team will contact you to discuss details and finalize pricing.</p>
+                                <button type="submit" class="btn-lux w-100 py-3">SUBMIT BESPOKE RESERVATION REQUEST</button>
+                                <p class="text-center text-muted-custom mt-3 small">Submitting this request entails no immediate payment obligation. A dedicated concierge specialist will review your preferences and provide a private confirmation proposal.</p>
                             </form>
                         <?php endif; ?>
                     </div>
                 </div>
 
-                <!-- Sidebar Column -->
-                <div class="col-lg-4 reveal">
-                    <div class="bg-stone p-4 p-md-5 sticky-top" style="top: 120px;">
-                        <p class="eyebrow mb-4">Journey Summary</p>
+                <!-- Sidebar Summary Column -->
+                <div class="col-lg-5 reveal">
+                    <div class="journey-sidebar" style="top: 120px;">
+                        <p class="eyebrow mb-3">JOURNEY ITINERARY</p>
                         
                         <div class="mb-4">
-                            <img src="<?= get_public_image($pkg['image'], 'plan') ?>" alt="<?= htmlspecialchars($pkg['package_name']) ?>" class="w-100 object-fit-cover mb-4" style="height: 200px;">
-                            <h4 style="font-family: var(--font-heading); font-size: 1.6rem; color: var(--color-charcoal); margin-bottom: 0.5rem;"><?= htmlspecialchars($pkg['package_name']) ?></h4>
-                            <div style="font-size: 0.9rem; color: var(--color-muted);"><?= htmlspecialchars($pkg['destination_name']) ?>, <?= htmlspecialchars($pkg['country']) ?></div>
+                            <img src="<?= get_package_image($pkg) ?>" alt="<?= htmlspecialchars($pkg['package_name']) ?>" class="w-100 rounded-1 mb-3 object-fit-cover" style="height: 220px;">
+                            <h4 style="font-size: 1.6rem; margin-bottom: 0.4rem;"><?= htmlspecialchars($pkg['package_name']) ?></h4>
+                            <div class="text-gold fw-semibold small text-uppercase" style="letter-spacing: 0.14em;"><?= htmlspecialchars($pkg['destination_name']) ?>, <?= htmlspecialchars($pkg['country']) ?></div>
                         </div>
                         
-                        <div class="mb-4 pb-4 border-bottom" style="border-color: rgba(0,0,0,0.1) !important;">
-                            <div class="d-flex justify-content-between mb-3" style="font-size: 0.9rem;">
-                                <span class="text-muted fw-medium">Duration</span>
-                                <span class="text-charcoal fw-bold"><?= htmlspecialchars($pkg['duration']) ?></span>
+                        <div class="mb-4">
+                            <div class="journey-sidebar__row">
+                                <span class="journey-sidebar__label mb-0">Duration</span>
+                                <span class="journey-sidebar__val"><?= htmlspecialchars($pkg['duration']) ?></span>
                             </div>
-                            <div class="d-flex justify-content-between mb-3" style="font-size: 0.9rem;">
-                                <span class="text-muted fw-medium">Plan Type</span>
-                                <span class="text-charcoal fw-bold"><?= htmlspecialchars($pkg['plan_type'] ?? 'Custom') ?></span>
+                            <div class="journey-sidebar__row">
+                                <span class="journey-sidebar__label mb-0">Rate per Person</span>
+                                <span class="journey-sidebar__val text-gold">₹<?= number_format($pkg['price']) ?></span>
                             </div>
-                            <div class="d-flex justify-content-between" style="font-size: 0.9rem;">
-                                <span class="text-muted fw-medium">Price</span>
-                                <span class="text-charcoal fw-bold">From ₹<?= number_format($pkg['price']) ?> <small class="text-muted" style="font-weight: 500; font-size: 0.8em;">(<?= htmlspecialchars($pkg['price_type'] ?? 'Per Person') ?>)</small></span>
+                            <div class="journey-sidebar__row">
+                                <span class="journey-sidebar__label mb-0">Est. Total Investment</span>
+                                <span class="journey-sidebar__val fs-5" id="totalEstimate">₹<?= number_format($pkg['price'] * (int)($_POST['travelers'] ?? 2)) ?></span>
+                            </div>
+                            <div class="journey-sidebar__row">
+                                <span class="journey-sidebar__label mb-0">Private Concierge</span>
+                                <span class="journey-sidebar__val text-success">Complimentary</span>
                             </div>
                         </div>
                         
-                        <div class="d-flex align-items-center gap-3 text-muted" style="font-size: 0.85rem; line-height: 1.5;">
-                            <i class="bi bi-shield-check fs-3 text-gold"></i>
-                            <div>Your information is secure. We never share your details with third parties.</div>
+                        <div class="d-flex align-items-start gap-3 p-3 bg-cream rounded-1 border" style="border-color: var(--color-border) !important;">
+                            <i class="bi bi-shield-lock-fill fs-3 text-gold"></i>
+                            <div class="small text-secondary" style="line-height: 1.6;">
+                                <strong>Five-Star Guarantee</strong><br>
+                                Enjoy private chauffeur handling, verified five-star properties, and flexible rescheduling up to 21 days before departure.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -231,5 +264,21 @@ require_once __DIR__ . '/includes/public_navbar.php';
         <?php endif; ?>
     </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const travellerSelect = document.getElementById('travellerCount');
+    const totalEstimate = document.getElementById('totalEstimate');
+    const basePrice = <?= (float)$pkg['price'] ?>;
+    
+    if (travellerSelect && totalEstimate) {
+        travellerSelect.addEventListener('change', function() {
+            const count = parseInt(this.value) || 1;
+            const total = count * basePrice;
+            totalEstimate.textContent = '₹' + total.toLocaleString('en-IN');
+        });
+    }
+});
+</script>
 
 <?php require_once __DIR__ . '/includes/public_footer.php'; ?>
