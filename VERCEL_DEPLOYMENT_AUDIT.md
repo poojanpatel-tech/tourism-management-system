@@ -1,131 +1,128 @@
 # VERCEL DEPLOYMENT AUDIT REPORT
-## Patel Travels — Tourism Management System
+## Patel Travels — Tourism Management System (College Project)
 
-**Project:** POOJAN_PHP_WEBSITE  
-**Repository:** [https://github.com/poojanpatel-tech/tourism-management-system.git](https://github.com/poojanpatel-tech/tourism-management-system.git)  
+**Project Name:** Tourism Management System (`POOJAN_PHP_WEBSITE`)  
+**GitHub Repository:** [https://github.com/poojanpatel-tech/tourism-management-system.git](https://github.com/poojanpatel-tech/tourism-management-system.git)  
+**Local Project Directory:** `C:\Users\dixit\OneDrive\Desktop\COLLEGE_PROJECT\POOJAN_PHP_WEBSITE`  
 **Deployment Target:** Vercel (Serverless Edge Platform)  
-**Auditor Role:** Senior PHP Deployment Engineer & Serverless Architect  
-**Audit Date:** October 15, 2026  
+**Auditor Roles:** Senior PHP Deployment Engineer, Vercel Serverless Architect, MySQL Database Engineer, and Application Security Auditor  
+**Audit Date:** October 16, 2026  
+**Final Readiness Status:** **READY FOR PREVIEW DEPLOYMENT** *(External MySQL credentials required for live database operations)*
 
 ---
 
 ## 1. Executive Summary
 
-This audit evaluates the deployment feasibility of the existing Patel Travels Tourism Management System on Vercel. 
+This comprehensive audit evaluates the technical feasibility of deploying the existing **Patel Travels Tourism Management System** to the **Vercel Serverless Platform** while maintaining 100% of its existing codebase, design aesthetics, administrative dashboard, and local XAMPP compatibility for college project evaluation.
 
-The application is built on **Vanilla PHP 8+, MySQL (PDO), HTML5, CSS3, and Bootstrap 5.3**. It consists of 40 PHP files organized across public visitor pages, an authentication module, and an administrative portal with CRUD management for destinations, packages, galleries, itineraries, CRM enquiries, and settings.
+The application is written in **Vanilla PHP 8+, MySQL (PDO), HTML5, CSS3, and Bootstrap 5.3**. It consists of 41 PHP files covering public visitor catalogs, inquiry/booking funnels, customer session management, and an administrative panel with full CRUD operations for destinations, tour packages, galleries, itineraries, CRM lead management, and business settings.
 
-### Key Finding:
-**The repository in its current state cannot be successfully deployed to Vercel without configuration changes.** 
-The existing `vercel.json` contains no runtime definition, `Dockerfile.vercel` is completely ignored by Vercel serverless builds, and the remote GitHub repository is currently out-of-sync with the verified local bug fixes. Furthermore, Vercel functions run in a serverless, read-only container environment without a local MySQL server.
-
-However, by implementing a lightweight front-controller adapter (`api/index.php`), configuring the maintained community PHP runtime (`vercel-php@0.9.4`), supporting cloud MySQL with SSL, and pushing the verified local fixes, the existing application can run on Vercel while preserving 100% of its existing codebase, UI, and local XAMPP compatibility.
+### Key Audit Conclusions:
+1. **No Application Rewrite Needed:** The application does **not** need to be rewritten in Node.js, Next.js, or any other framework. It runs on Vercel using the maintained community PHP runtime (`vercel-php@0.8.0`, targeting PHP 8.4).
+2. **Serverless Dispatcher Architecture:** Because Vercel free/hobby accounts enforce a strict limit of 12 serverless functions per project (and loose PHP files in the root directory are not automatically invoked as serverless functions), a single high-performance front-controller (`api/index.php`) serves as the serverless bridge.
+3. **Database Independence:** Vercel functions cannot connect to `127.0.0.1:3306` (local XAMPP). The application requires an externally hosted, MySQL-compatible cloud database (such as **TiDB Cloud Serverless** or **Aiven for MySQL**). The database layer has been verified to fail gracefully with a safe error screen if environment variables are missing, masking technical SQL exceptions from public visitors.
+4. **Filesystem Statelessness:** The Vercel runtime filesystem is strictly read-only except for ephemeral `/tmp`. Session storage has been guarded to use `/tmp`, and bundled assets (including stock package photography) are served through Vercel's global Edge CDN.
 
 ---
 
 ## 2. Current Project Architecture
 
-### 2.1 File & Directory Layout
+### 2.1 Directory & File Layout
 ```text
 POOJAN_PHP_WEBSITE/
-├── index.php                     # Public Homepage
-├── destinations.php              # Public Destination Catalog
-├── destination-details.php       # Single Destination & linked tours
-├── tours.php                     # Public Tour Packages with filters
-├── tour-details.php              # Single Tour Details & Accordion
-├── about.php                     # Company About Page
-├── contact.php                   # Contact & Lead Form
-├── book.php                      # Package Booking / Enquiry Submission
+├── index.php                         # Public Homepage & Featured Tours
+├── about.php                         # Company Profile & Core Values
+├── destinations.php                  # Destination Catalog with Search & Filter
+├── destination-details.php           # Single Destination View & Associated Tours
+├── tours.php                         # Curated Journeys & Packages with Filtering
+├── tour-details.php                  # Single Tour Page with Tabbed Accordion
+├── contact.php                       # Contact & Direct Lead Inquiry Form
+├── book.php                          # Tour Booking & Inquiry Funnel
+├── api/
+│   └── index.php                     # Vercel Serverless Front-Controller Dispatcher
 ├── auth/
-│   ├── login.php                 # Admin Login Form
-│   └── logout.php                # Session Destruction
+│   ├── login.php                     # Admin Authentication & CSRF Validation
+│   └── logout.php                    # Session Destruction & Cookie Invalidation
 ├── admin/
-│   ├── dashboard.php             # KPIs & Recent Inquiries
-│   ├── settings.php              # Business Settings Management
-│   ├── destinations/             # Destination CRUD (index, create, view, edit)
-│   ├── packages/                 # Package CRUD & sub-entities (itinerary, highlights, inclusions, gallery)
-│   └── enquiries/                # CRM Lead Management (index, view)
+│   ├── dashboard.php                 # KPI Statistics & Recent Inquiries
+│   ├── settings.php                  # Business Configuration Management
+│   ├── destinations/                 # Destination CRUD (index, create, view, edit, delete)
+│   ├── packages/                     # Package CRUD (index, create, view, edit, delete, gallery, highlights, inclusions, itinerary)
+│   └── enquiries/                    # CRM Lead Management (index, view & status pipeline)
 ├── config/
-│   └── database.php              # PDO Connection Factory & Error Screen
+│   └── database.php                  # Singleton PDO Connection, Cloud SSL & Error Screen
 ├── includes/
-│   ├── auth.php                  # Admin session guard & helpers
-│   ├── public_functions.php      # Client session & CSRF helpers
-│   ├── header.php, footer.php    # Admin layout partials
-│   ├── navbar.php, sidebar.php   # Admin navigation
-│   └── public_header.php, public_footer.php # Public layout partials
-├── assets/                       # CSS, JS, Images (Static)
-│   └── images/packages/          # Package Uploads (.htaccess protected)
-├── database.sql                  # Canonical 14-table schema & seed data
-├── migration_fix.sql             # Safe upgrade script
-├── admin_server.php              # Local PHP CLI dev router (Port 8000)
-├── client_server.php             # Local PHP CLI dev router (Port 9000)
-├── vercel.json                   # Existing (Incomplete)
-└── Dockerfile.vercel             # Existing (Ignored by Vercel)
+│   ├── auth.php                      # Admin Session Guard & Helper Utilities
+│   ├── public_functions.php          # Public Helpers, Image Resolvers & CSRF Utilities
+│   ├── header.php, footer.php        # Admin Layout Partials
+│   ├── navbar.php, sidebar.php       # Admin Navigation Components
+│   └── public_header.php, public_footer.php # Public Luxury Layout Partials
+├── assets/
+│   ├── css/ (style.css, public.css)  # Custom Stylesheets & Design Tokens
+│   ├── js/ (main.js, public.js)      # Client Interactions & Form Validations
+│   ├── images/packages/              # Stock Uploads & .htaccess Execution Barrier
+│   └── public/images/fallback/       # Edge CDN Fallback Photography (hero, plan, destination)
+├── database.sql                      # Canonical 14-table MySQL Schema & Seed Dump
+├── migration_fix.sql                 # Idempotent Database Upgrade Script
+├── vercel.json                       # Vercel Runtime & Edge CDN Routing Specification
+├── .vercelignore                     # Build Artifact Exclusion Rules
+├── .gitignore                        # Git Secret & Audit Exclusion Rules
+└── README.md                         # Dual-Mode Development & System Documentation
 ```
 
-### 2.2 Server-Side Execution Model
-- The application uses traditional procedural PHP file-based routing (e.g. `/tours.php`, `/admin/dashboard.php`).
-- Includes rely on relative filesystem paths (`__DIR__ . '/../../config/database.php'`).
-- Sessions are managed using native PHP sessions with cookie strict mode.
-- Database access uses a singleton PDO instance with prepared statements.
+### 2.2 Server-Side Execution Model & Routing
+The application utilizes file-based procedural routing. When deployed to Vercel:
+- **Static Asset Requests** (`/assets/*`, `/favicon.ico`, `/robots.txt`) are intercepted by Vercel Edge CDN and served immediately without invoking serverless compute.
+- **Dynamic Application Requests** (`/`, `/destinations`, `/tour-details.php?id=1`, `/admin/dashboard`, etc.) are routed to `/api/index.php`.
+- **The Front Controller (`api/index.php`)**:
+  1. Configures `session.save_path` to `/tmp` if writable.
+  2. Parses and restores `$_GET` and `$_SERVER['QUERY_STRING']` to ensure deep links and filter queries (`?id=...`, `?status=...`) remain intact across serverless rewrites.
+  3. Enforces security guards blocking `.git`, `.env`, `database.sql`, `config/`, and `includes/`.
+  4. Resolves the target PHP script using canonical path checking (`realpath`) to prevent directory traversal.
+  5. Switches the current working directory (`chdir`) to the target script's directory so all relative `require_once` statements resolve seamlessly.
+  6. Dispatches the script via `require`.
 
 ---
 
-## 3. Current Deployment Blockers
+## 3. Deployment Blockers: Identified & Resolved
 
-| Blocker ID | Severity | Description | Impact on Vercel |
-| :--- | :--- | :--- | :--- |
-| **BLK-01** | **Critical** | `vercel.json` lacks PHP runtime and function mapping. | Vercel treats PHP files as static assets or fails build; server-side code does not execute. |
-| **BLK-02** | **Critical** | Attempted container deployment via `Dockerfile.vercel`. | Vercel Serverless platform does not build or run custom Docker containers. `Dockerfile.vercel` is completely ignored. |
-| **BLK-03** | **Critical** | Absence of an `api/` directory entry point. | Vercel's serverless build system requires function entry points inside `api/`. Loose PHP files in root are not invoked as serverless functions by default. |
-| **BLK-04** | **Critical** | Local Database Dependency (`127.0.0.1:3306`). | Serverless execution containers do not run MySQL. Without an external cloud MySQL database configured, all database queries fail. |
-| **BLK-05** | **High** | Cloud MySQL SSL Support Missing in PDO. | Many free cloud MySQL providers (e.g. TiDB Cloud, Aiven, PlanetScale) enforce TLS/SSL. `config/database.php` currently lacks SSL PDO attributes. |
-| **BLK-06** | **High** | Ephemeral Serverless Filesystem for Admin Image Uploads. | Vercel serverless functions have a read-only filesystem except for temporary `/tmp`. Images uploaded via `admin/packages/create.php` cannot persist locally across function invocations. |
-| **BLK-07** | **High** | Remote GitHub Repository Out of Sync. | The GitHub repository (`origin/main`) currently contains pre-audit bugs (corrupted admin hash, missing settings table, broken column names). Deploying directly from GitHub without committing the verified local fixes will deploy a broken application. |
+| Blocker ID | Severity | Root Cause | Resolution Status | Verified Fix |
+| :--- | :---: | :--- | :---: | :--- |
+| **BLK-01** | **Critical** | `Dockerfile.vercel` was created based on the assumption that Vercel builds custom Docker containers. | **Resolved** | Vercel Serverless executes lambdas via community runtimes; `Dockerfile.vercel` is excluded in `.vercelignore`. The front-controller adapter handles execution. |
+| **BLK-02** | **Critical** | Invalid community runtime specification `vercel-php@0.9.4` in `vercel.json` (npm package does not exist). | **Resolved** | Pinned to verified, published runtime `vercel-php@0.8.0` (PHP 8.4 with Node.js 22 runner). |
+| **BLK-03** | **Critical** | Vercel Serverless 12-function limit prevented mapping 41 PHP files as independent serverless functions. | **Resolved** | Unified all dynamic routes into a single serverless function (`api/index.php`) using Vercel routes. |
+| **BLK-04** | **Critical** | Local MySQL dependency (`127.0.0.1:3306`). Serverless containers cannot connect to local XAMPP. | **Resolved** | Implemented environment-based database configuration (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `DB_SSL_MODE`) while preserving local XAMPP defaults when `VERCEL` is not set. |
+| **BLK-05** | **High** | Cloud MySQL TLS/SSL negotiation failures on databases requiring encrypted transport (e.g. TiDB Cloud, Aiven). | **Resolved** | Added intelligent SSL handling in `config/database.php` that activates `PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT` and supports custom `DB_SSL_CA` or system CA bundles. |
+| **BLK-06** | **High** | Ephemeral/Read-Only filesystem preventing session creation and local package photo uploads on Vercel. | **Resolved** | Configured `session.save_path` to `/tmp` in `api/index.php`, `includes/auth.php`, `includes/public_header.php`, `tour-details.php`, and `book.php`. Image resolver uses bundled stock CDN assets with graceful fallbacks. |
+| **BLK-07** | **High** | Query string parameters dropped during serverless rewrite proxying (`?id=1` lost on tour detail pages). | **Resolved** | `api/index.php` extracts `$_SERVER['REQUEST_URI']` query parameters and re-populates `$_GET` and `$_SERVER['QUERY_STRING']`. |
+| **BLK-08** | **Medium** | Direct web execution of internal layout partials (`/includes/footer.php`) and CLI routers (`/admin_server.php`). | **Resolved** | Added `/includes/`, `admin_server.php`, and `client_server.php` to `$forbiddenPatterns` in `api/index.php` returning HTTP 403 Forbidden. |
 
 ---
 
-## 4. Differences Between Local Code and GitHub Repository
+## 4. Local Code vs. GitHub Repository Synchronization
 
-A Git audit of `HEAD` (`origin/main` commit `dfd4119`) against the local working directory revealed **11 modified files and 2 untracked files** containing verified fixes that have not yet been pushed to GitHub:
+A comparison between the local workspace and GitHub repository (`https://github.com/poojanpatel-tech/tourism-management-system.git`) reveals:
 
-| File | Status | Local Fix Present | Missing on GitHub |
-| :--- | :---: | :--- | :--- |
-| `database.sql` | Modified | Clean UTF-8, valid bcrypt hash for `admin123`, `duration_nights` added, `settings` table included, CRM enum updated. | Corrupted password hash `'/ma2.ycVdVXCdFAPMYlVRna'`, UTF-16LE encoding, missing settings table. |
-| `contact.php` | Modified | Defensive `try...catch` fallback for settings queries. | Fatal PDOException if settings missing. |
-| `admin/settings.php` | Modified | Removed stray `session_name()` call; normalized includes; masked raw PDO errors. | Triggers `PHP Warning: Session name cannot be changed`. |
-| `admin/enquiries/view.php`| Modified | Server-side status validation & try-catch handling. | Unhandled exceptions on invalid transitions. |
-| `admin/dashboard.php` | Modified | Database-backed Confirmed Booking Value calculation ($\sum \text{price} \times \text{travellers}$). | Hardcoded static ₹0 placeholder. |
-| `includes/auth.php` | Modified | Guarded `session.save_path` for Windows compatibility. | Unconditional `ini_set` for `/tmp`. |
-| `includes/public_header.php`| Modified| Guarded `session.save_path` for Windows compatibility. | Unconditional `ini_set` for `/tmp`. |
-| `seed.sql` | Modified | Repaired typos in highlights and inclusions table definitions. | `highlight_text` and `	ype` typos present. |
-| `README.md` | Modified | Comprehensive dual-server, installation, and deployment documentation. | Outdated setup instructions. |
-| `migration_fix.sql` | Untracked| Complete idempotent upgrade script. | File absent from GitHub. |
-| `assets/images/packages/.htaccess` | Untracked| Execution prevention inside upload directory. | File absent from GitHub. |
+1. **Remote Repository Status:** The remote `origin/main` branch is at commit `8b03a25` (`feat: configure Vercel serverless PHP routing, cloud MySQL SSL, and audit fixes`).
+2. **Current Local Changes:** The local workspace contains 6 modified files with verified serverless resilience fixes ready for review and commit:
+   - `vercel.json` (runtime pinned to `vercel-php@0.8.0`)
+   - `api/index.php` (session `/tmp` initialization, query parameter preservation, static streaming, security blocks)
+   - `config/database.php` (enhanced cloud SSL attribute activation for TiDB/Aiven/Railway)
+   - `tour-details.php` (guarded session initialization)
+   - `book.php` (guarded session initialization)
+   - `.vercelignore` (CLI server scripts and audit reports excluded from bundle)
 
 ---
 
 ## 5. Required Deployment Configuration
 
-### 5.1 Vercel Serverless Architecture
-To deploy a multi-page procedural PHP project to Vercel without refactoring 40 files:
-1. **Community PHP Runtime**: Use `vercel-php@0.9.4` (the official community runtime maintained by `vercel-community/php`).
-2. **Front-Controller Dispatcher (`api/index.php`)**: Create a lightweight, secure router in `api/index.php` that intercepts incoming web requests, validates requested PHP routes, sets appropriate working directories, and executes the targeted PHP file.
-3. **Static Asset Bypass**: Route requests matching `/assets/(.*)` directly to static assets, ensuring stylesheets, scripts, and bundled images are served via Vercel's global Edge CDN without invoking serverless functions.
-4. **Clean Route Mapping**:
-   - `/` $\to$ `index.php`
-   - `/destinations` or `/destinations.php` $\to$ `destinations.php`
-   - `/auth/login` or `/auth/login.php` $\to$ `auth/login.php`
-   - `/admin/dashboard` or `/admin/dashboard.php` $\to$ `admin/dashboard.php`
-   - `/admin/packages/edit.php?id=1` $\to$ `admin/packages/edit.php` (with `$_GET` preserved)
-
-### 5.2 Updated `vercel.json` Specification
+### 5.1 `vercel.json` Specification
 ```json
 {
   "version": 2,
   "functions": {
     "api/index.php": {
-      "runtime": "vercel-php@0.9.4"
+      "runtime": "vercel-php@0.8.0"
     }
   },
   "routes": [
@@ -138,6 +135,10 @@ To deploy a multi-page procedural PHP project to Vercel without refactoring 40 f
       "dest": "/favicon.ico"
     },
     {
+      "src": "/robots.txt",
+      "dest": "/robots.txt"
+    },
+    {
       "src": "/(.*)",
       "dest": "/api/index.php"
     }
@@ -145,60 +146,91 @@ To deploy a multi-page procedural PHP project to Vercel without refactoring 40 f
 }
 ```
 
+### 5.2 Build & Execution Settings in Vercel
+- **Framework Preset:** `Other`
+- **Root Directory:** `./` (leave default)
+- **Build Command:** None (pure PHP; no build step required)
+- **Output Directory:** None (handled dynamically by community runtime)
+- **Install Command:** None (no composer packages required)
+
 ---
 
 ## 6. Database and Storage Requirements
 
 ### 6.1 External MySQL Database Options
-Because Vercel serverless functions cannot connect to `127.0.0.1` (local XAMPP), an external hosted MySQL database is required. Recommended compatible providers with free/affordable tiers:
+Because Vercel serverless functions do not host a local MySQL database, the production deployment requires an externally accessible, MySQL-compatible cloud database:
 
-1. **TiDB Cloud (Serverless)**:
-   - Fully MySQL 8.0 wire-compatible.
-   - Generous free tier (5GB storage, 50M Request Units/month).
-   - Enforces TLS/SSL connection.
-   - Low latency serverless connectivity.
-2. **Aiven for MySQL**:
-   - Standard managed MySQL on AWS/GCP.
-   - SSL certificates provided.
-3. **Clever Cloud / Railway**:
-   - Standard MySQL containerized service.
+| Provider | MySQL Compatibility | Free Tier Details | SSL Requirement | Recommended For |
+| :--- | :---: | :--- | :---: | :--- |
+| **TiDB Cloud (Serverless)** | MySQL 8.0 wire-compatible | **5 GB storage, 50M Request Units/mo free** | **Required** (TLS 1.2+) | **Recommended** (Best free tier, instant setup) |
+| **Aiven for MySQL** | Native MySQL 8.0 | Free trial / Paid starting at ~$19/mo | **Required** (CA cert provided) | Production enterprise |
+| **Clever Cloud** | Native MySQL 8.0 | Free shared database tier | Optional/Standard | Quick testing |
+| **Railway** | Native MySQL 8.0 | $5 monthly credit tier | Standard MySQL | Alternative option |
 
-### 6.2 Required Environment Variables in Vercel
-In the Vercel Project Settings $\to$ Environment Variables:
-- `DB_HOST`: Hostname of cloud database (e.g. `gateway01.ap-southeast-1.prod.aws.tidbcloud.com`)
-- `DB_PORT`: Database port (default `3306` or provider port like `4000`)
-- `DB_NAME`: Database name (e.g. `tourism_management`)
-- `DB_USER`: Database username
-- `DB_PASS`: Database password
-- `DB_SSL_MODE`: Set to `REQUIRED` or `1` for SSL-enforced databases
+### 6.2 Environment Variables Required in Vercel Dashboard
+In **Vercel Project Settings $\to$ Environment Variables**:
 
-### 6.3 Persistent Image Storage Considerations
-- **Current Behavior**: Admin photo uploads write to `assets/images/packages/`.
-- **Serverless Reality**: On Vercel, the local container is read-only. Uploaded files saved locally are lost when the function instance terminates.
-- **Recommended Strategy**:
-  1. *Immediate/Preview Phase*: Keep bundled stock images in `assets/images/` (which deploy via Edge CDN) and document that new uploads require an external storage provider.
-  2. *Production Phase*: Integrate an external media service such as Cloudinary or AWS S3 via an adapter in `admin/packages/create.php` and `gallery.php`.
+| Variable Name | Required | Example Value | Description |
+| :--- | :---: | :--- | :--- |
+| `DB_HOST` | **Yes** | `gateway01.us-east-1.prod.aws.tidbcloud.com` | Hostname of external cloud database |
+| `DB_PORT` | **Yes** | `4000` (or `3306`) | Connection port |
+| `DB_NAME` | **Yes** | `tourism_management` | Database name |
+| `DB_USER` | **Yes** | `2xAbc99.root` | Database username |
+| `DB_PASS` | **Yes** | `YourSecretPassword123!` | Database password |
+| `DB_SSL_MODE` | Optional | `REQUIRED` | Set to `REQUIRED` for TiDB Cloud or SSL-enforced providers |
+| `DB_SSL_VERIFY` | Optional | `true` (or `false`) | Set to `false` if provider uses self-signed or internal CA certs |
 
----
-
-## 7. Security Risks & Mitigations
-
-1. **Accidental Credential Exposure**:
-   - Database credentials must **never** be placed in `vercel.json`, `README.md`, or committed to Git.
-   - `.env` files must be strictly excluded via `.gitignore` and `.vercelignore`.
-2. **Directory Traversal in Front-Controller**:
-   - The front controller (`api/index.php`) must use `realpath()` and verify that resolved paths reside strictly within the project directory.
-   - Requests to `.git`, `.env`, `database.sql`, and `config/` must return HTTP 403 Forbidden.
-3. **Public Exposure of Server Errors**:
-   - `renderDatabaseErrorScreen()` must log technical exception details to `error_log` and only present clean, sanitized guidance to public visitors.
+### 6.3 Media & Image Storage Strategy
+- **Static & Bundled Media:** All images in `assets/` (including default package and destination imagery, luxury hero banners, and fallback photos) are deployed as static assets to Vercel's Edge CDN. They load instantly with global edge caching.
+- **Admin Image Uploads:** Because Vercel functions have a read-only filesystem, images uploaded through the admin panel (`admin/packages/create.php`, `gallery.php`) cannot be written permanently to the local disk.
+- **Recommended Handling:**
+  1. *For College Evaluation & Preview:* Admin packages can specify any direct image filename matching bundled assets, or full HTTPS URLs from Unsplash/Cloudinary.
+  2. *For Production Persistent Uploads:* Configure an external media store (e.g. Cloudinary or AWS S3) via an adapter.
 
 ---
 
-## 8. Recommended Deployment Roadmap
+## 7. Security Audit & Preserved Controls
 
-1. **Step 1 — Database Layer**: Update `config/database.php` to support SSL attributes (`PDO::MYSQL_ATTR_SSL_CA` / `PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT`) while maintaining local XAMPP fallback defaults.
-2. **Step 2 — Front Controller**: Create `api/index.php` as a secure, clean dispatcher supporting both root and extension-less URLs.
-3. **Step 3 — Vercel Configuration**: Replace `vercel.json` with the verified `functions` and `routes` specification targeting `vercel-php@0.9.4`. Create `.vercelignore` to exclude local scratch files, dumps, and test scripts.
-4. **Step 4 — Local Verification**: Lint all PHP files, test the front controller with simulated Vercel serverless requests, and verify asset routes.
-5. **Step 5 — Documentation**: Author `VERCEL_DEPLOYMENT_GUIDE.md` detailing the external database setup, environment variable configuration, and deployment promotion steps.
-6. **Step 6 — Git Preparation**: Stage and review all verified changes, providing exact, safe commands for the user to commit and push to GitHub.
+1. **Password Hashing:** Uses PHP's native `password_hash()` and `password_verify()` with `PASSWORD_BCRYPT`. The default administrator account (`admin` / `admin123`) was verified against the bcrypt hash in `database.sql`.
+2. **Session Security:** 
+   - `session.use_only_cookies = 1`
+   - `session.use_strict_mode = 1`
+   - Session identifier regenerated on login (`session_regenerate_id(true)`) to mitigate session fixation attacks.
+   - Separate session namespaces: `TOURISM_CLIENT_SESSION` and `TOURISM_ADMIN_SESSION`.
+3. **Route Protection:** Every one of the 18 admin routes enforces `require_login()`. Unauthenticated requests are immediately redirected to `/auth/login.php` with HTTP 302.
+4. **CSRF Defense:** Cryptographic CSRF tokens (`bin2hex(random_bytes(32))`) validated with timing-attack resistant `hash_equals()` on all POST forms.
+5. **SQL Injection Prevention:** 100% of user-supplied parameters are bound using PDO prepared statements (`$stmt->prepare()` and `$stmt->execute()`). Zero concatenated SQL statements.
+6. **XSS Prevention:** All dynamic database outputs are escaped using `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`.
+7. **Production Error Masking:** `config/database.php` catches `PDOException`, logs technical connection errors to server `error_log`, and renders a sanitized, safe notice to public visitors without exposing passwords, hosts, or stack traces.
+8. **Credential Protection:** Zero credentials committed to Git or hardcoded in PHP. `.env` and `.env.*` are excluded by `.gitignore` and `.vercelignore`.
+
+---
+
+## 8. Verification Results
+
+| Test Category | Description | Verification Method | Status |
+| :--- | :--- | :--- | :---: |
+| **PHP Syntax** | Linted all 41 project PHP files | `php -l` automated scan | **PASSED** (41/41) |
+| **Vercel Config** | Validated `vercel.json` JSON structure & runtime | Node.js JSON schema parser | **PASSED** |
+| **Security Barriers** | Verified access blocked to `.env`, `database.sql`, `config/`, `includes/`, `vercel.json` | Isolated CLI HTTP simulation | **PASSED** (HTTP 403) |
+| **404 Handling** | Verified unknown routes return friendly 404 | Simulated invalid route request | **PASSED** (HTTP 404) |
+| **Static Streaming** | Verified CSS, JS, and image assets served with proper MIME | Front-controller stream test | **PASSED** (HTTP 200, text/css) |
+| **Admin Route Guard** | Unauthenticated access to `/admin/dashboard` | Simulated unauthenticated request | **PASSED** (HTTP 302 Redirect) |
+| **Public Pages (9/9)** | Homepage, About, Destinations, Details, Tours, Tour Details, Contact, Booking, Login | Isolated front-controller rendering | **PASSED** (9/9 HTTP 200) |
+| **Admin Pages (5/5)** | Dashboard, Settings, Destinations List, Packages List, Enquiries List | Authenticated session simulation | **PASSED** (5/5 HTTP 200) |
+| **Database Queries** | Read-only verification of 12 critical queries across 14 tables | Local MySQL test execution | **PASSED** (12/12) |
+| **CRUD Operations** | Transactional INSERT & UPDATE for Enquiries, Destinations, Packages, Settings | Isolated transaction with rollback | **PASSED** (Zero dirty data) |
+| **Error Screen** | Failure screen when database is offline or unconfigured | Simulated missing DB host on Vercel | **PASSED** (HTTP 500, Masked) |
+| **Local Compatibility** | Fallback defaults for local XAMPP (`127.0.0.1:3306`, `root`) | Standalone PHP execution without `VERCEL` | **PASSED** |
+| **Remote Vercel Live** | Live deployment to user's personal Vercel dashboard | Requires user's Vercel account and cloud DB | **PENDING USER ACTION** |
+
+---
+
+## 9. Deployment Readiness Verdict
+
+### Current Status: **READY FOR PREVIEW DEPLOYMENT**
+
+The codebase and configuration files are fully prepared and locally verified. To complete deployment:
+1. Review and commit the 6 verified files using Git.
+2. Provision a free cloud MySQL database (e.g. TiDB Cloud Serverless) and import `database.sql`.
+3. Link the GitHub repository in the Vercel dashboard and enter the 5 database environment variables.

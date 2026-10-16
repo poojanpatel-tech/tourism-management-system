@@ -25,8 +25,10 @@ backup_*.sql
 Dockerfile*
 docker-compose*
 
+# Local CLI server routers (not used in serverless)
+admin_server.php
+client_server.php
+
 # Local Audit Documentation
-PROJECT_AUDIT_REPORT.md
-PROJECT_FIX_REPORT.md
-FINAL_VERIFICATION_REPORT.md
-VERCEL_DEPLOYMENT_AUDIT.md
+*.md
+!README.md

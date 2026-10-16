@@ -2,8 +2,15 @@
 /**
  * Journey Enquiry Flow — Patel Travels
  */
-session_name('TOURISM_CLIENT_SESSION');
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    if (is_dir('/tmp') && is_writable('/tmp')) {
+        ini_set('session.save_path', '/tmp');
+    }
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_strict_mode', '1');
+    session_name('TOURISM_CLIENT_SESSION');
+    session_start();
+}
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/public_functions.php';
 

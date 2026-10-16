@@ -63,7 +63,7 @@ function getDBConnection(): PDO
         PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . DB_CHARSET,
     ];
 
-    // SSL Configuration for Cloud Databases (e.g. TiDB Cloud, Aiven, AWS RDS, DigitalOcean)
+    // SSL Configuration for Cloud Databases (e.g. TiDB Cloud, Aiven, AWS RDS, DigitalOcean, Railway)
     $sslRequired = in_array(strtolower(trim((string)DB_SSL_MODE)), ['required', 'true', '1', 'verify_ca', 'verify_identity'], true);
     if ($sslRequired || !empty(DB_SSL_CA)) {
         if (!empty(DB_SSL_CA) && file_exists(DB_SSL_CA)) {
@@ -73,8 +73,14 @@ function getDBConnection(): PDO
         } elseif (file_exists('/etc/pki/tls/certs/ca-bundle.crt')) {
             $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/pki/tls/certs/ca-bundle.crt';
         }
-        if (getenv('DB_SSL_VERIFY') === 'false' || getenv('DB_SSL_VERIFY') === '0') {
-            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+
+        $verifyServerCert = (getenv('DB_SSL_VERIFY') === 'false' || getenv('DB_SSL_VERIFY') === '0') ? false : true;
+        if (!isset($options[PDO::MYSQL_ATTR_SSL_CA])) {
+            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = $verifyServerCert;
+        } else {
+            if ($verifyServerCert === false) {
+                $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+            }
         }
     }
 
@@ -118,6 +124,15 @@ function checkDBStatus(): array
             $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/ssl/certs/ca-certificates.crt';
         } elseif (file_exists('/etc/pki/tls/certs/ca-bundle.crt')) {
             $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/pki/tls/certs/ca-bundle.crt';
+        }
+
+        $verifyServerCert = (getenv('DB_SSL_VERIFY') === 'false' || getenv('DB_SSL_VERIFY') === '0') ? false : true;
+        if (!isset($options[PDO::MYSQL_ATTR_SSL_CA])) {
+            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = $verifyServerCert;
+        } else {
+            if ($verifyServerCert === false) {
+                $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+            }
         }
     }
 
