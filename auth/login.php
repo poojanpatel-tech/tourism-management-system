@@ -182,6 +182,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .return-link:hover {
             color: var(--color-gold);
         }
+        .faculty-note {
+            background: rgba(198, 167, 106, 0.08);
+            border: 1px solid rgba(198, 167, 106, 0.3);
+            border-radius: 6px;
+            padding: 1rem 1.1rem;
+            font-size: 0.82rem;
+            line-height: 1.7;
+        }
+        .faculty-note-title {
+            color: var(--color-gold);
+            font-weight: 700;
+            font-size: 0.86rem;
+            letter-spacing: 0.02em;
+            margin-bottom: 0.5rem;
+        }
+        .faculty-note ul {
+            list-style: disc inside;
+            margin-bottom: 0;
+            padding-left: 0;
+            color: var(--color-ivory);
+        }
+        .faculty-note ul li {
+            margin-bottom: 0.2rem;
+        }
+        .faculty-note strong {
+            color: var(--color-gold);
+        }
+        .faculty-note code {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.15rem 0.45rem;
+            border-radius: 3px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -232,7 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            name="password"
                            placeholder="••••••••"
                            required>
-                    <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePasswordBtn" style="border-color: rgba(255, 255, 255, 0.12); color: rgba(255,255,255,0.6);">
+                    <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePasswordBtn" style="border-color: rgba(255, 255, 255, 0.12); color: rgba(255,255,255,0.6);" aria-label="Toggle password visibility">
                         <i class="bi bi-eye" id="toggleIcon"></i>
                     </button>
                 </div>
@@ -240,10 +275,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="mt-4 pt-2">
                 <button type="submit" class="btn-gold">
-                    AUTHENTICATE & ENTER PORTAL <i class="bi bi-arrow-right ms-1"></i>
+                    AUTHENTICATE &amp; ENTER PORTAL <i class="bi bi-arrow-right ms-1"></i>
                 </button>
             </div>
         </form>
+
+        <!-- 📌 Faculty Evaluation Note -->
+        <div class="faculty-note mt-4">
+            <div class="faculty-note-title">📌 Faculty Evaluation — Admin Login Details</div>
+            <ul>
+                <li><strong>Login ID:</strong> <code>admin</code></li>
+                <li><strong>Password:</strong> <code>admin123</code></li>
+            </ul>
+        </div>
 
         <div class="text-center mt-4 pt-3 border-top" style="border-color: rgba(255, 255, 255, 0.06) !important;">
             <a href="<?= url('index.php') ?>" class="return-link">
